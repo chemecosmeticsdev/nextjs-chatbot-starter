@@ -37,7 +37,7 @@ export default function AboutPage() {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Powered by AWS Bedrock's Nova Micro model, providing fast and cost-effective AI responses with enterprise-grade security.
+                Powered by AWS Bedrock&apos;s Nova Micro model, providing fast and cost-effective AI responses with enterprise-grade security.
               </p>
             </CardContent>
           </Card>
