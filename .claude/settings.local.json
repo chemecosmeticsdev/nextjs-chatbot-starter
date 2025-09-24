@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(~/dev/**)",
+      "mcp__github__get_file_contents",
+      "Bash(git clone:*)",
+      "Bash(git checkout:*)",
+      "mcp__neon__list_projects",
+      "mcp__neon__run_sql_transaction",
+      "mcp__neon__run_sql",
+      "mcp__neon__describe_table_schema",
+      "mcp__neon__get_database_tables",
+      "Bash(node:*)",
+      "mcp__shadcn__search_items_in_registries",
+      "WebFetch(domain:ui.shadcn.com)",
+      "mcp__aws-knowledge-mcp-server__aws___search_documentation",
+      "mcp__aws-knowledge-mcp-server__aws___read_documentation",
+      "Bash(npm install:*)",
+      "Bash(npx shadcn@latest add:*)",
+      "Bash(npm run build:*)",
+      "Bash(aws:*)",
+      "Bash(git add:*)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "shadcn",
+    "aws-knowledge-mcp-server"
+  ]
+}
