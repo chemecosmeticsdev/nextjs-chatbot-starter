@@ -19,7 +19,8 @@
       "Bash(npx shadcn@latest add:*)",
       "Bash(npm run build:*)",
       "Bash(aws:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
