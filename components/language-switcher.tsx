@@ -51,7 +51,6 @@ export function LanguageSwitcher() {
     }
   }
 
-  const currentLang = languages.find(lang => lang.code === currentLanguage) || languages[0]
 
   return (
     <DropdownMenu>

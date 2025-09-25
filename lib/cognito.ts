@@ -18,7 +18,7 @@ const awsConfig = {
 };
 
 // Helper function to calculate SECRET_HASH for Cognito
-function calculateSecretHash(username: string, clientId: string, clientSecret: string): string {
+export function calculateSecretHash(username: string, clientId: string, clientSecret: string): string {
   const message = username + clientId;
   return crypto.createHmac('SHA256', clientSecret).update(message).digest('base64');
 }

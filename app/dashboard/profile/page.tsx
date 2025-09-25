@@ -3,18 +3,15 @@
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import {
-  User,
-  Mail,
-  Phone,
   MapPin,
   Calendar,
   Shield,
   Settings,
   Eye,
+  UserCircle,
   EyeOff,
   Save,
   Bell,
-  Globe,
   Palette,
   Sun,
   Moon,
@@ -223,7 +220,7 @@ export default function ProfilePage() {
         <Card className="md:col-span-1">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
+              <UserCircle className="h-5 w-5" />
               Profile Overview
             </CardTitle>
           </CardHeader>

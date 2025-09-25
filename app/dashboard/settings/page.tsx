@@ -16,7 +16,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  Settings,
   Database,
   Shield,
   Users,
@@ -29,7 +28,6 @@ import {
   Server,
   Key,
   Lock,
-  Mail,
   Globe,
   Palette,
   Sun,
@@ -106,7 +104,6 @@ export default function SettingsPage() {
     },
   });
 
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [userRole, setUserRole] = useState<string>('');
 
@@ -118,7 +115,6 @@ export default function SettingsPage() {
         const data = await response.json();
         if (data.success && data.user.role === 'super_admin') {
           setUserRole(data.user.role);
-          setLoading(false);
         } else {
           // Redirect if not super admin
           window.location.href = '/dashboard';

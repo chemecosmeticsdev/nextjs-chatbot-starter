@@ -1,0 +1,3 @@
+The first task is to create a new Next.js project and setup proper local git repo. Then create a new remote github repo and push to github repo. Make sure to use proper gitignore list to avoid bloating only commit neccessary files and folders. And then deploy to
+  Amplify using AWS cli. Use proper subagents and mcp servers to accomplish the task effieciently. The end result should be a next.js starter template hosted by AWS amplify (default region). Make sure to not commit sensitive information to github. If you run in to any
+  issue, make sure to utilize subagents and/or mcp servers to help with debugging.

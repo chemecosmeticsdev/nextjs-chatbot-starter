@@ -5,7 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
 import { Switch } from '@/components/ui/switch';
 import { Upload, FileText, X, CheckCircle, AlertCircle } from 'lucide-react';
@@ -96,8 +95,7 @@ export default function DocumentUploadPage() {
     });
   };
 
-  const getFileIcon = (fileName: string) => {
-    const extension = fileName.split('.').pop()?.toLowerCase();
+  const getFileIcon = () => {
     return <FileText className="h-6 w-6 text-blue-600" />;
   };
 
@@ -200,7 +198,7 @@ export default function DocumentUploadPage() {
                     {uploadFiles.map((uploadFile) => (
                       <div key={uploadFile.id} className="flex items-center space-x-3 p-3 border rounded-lg">
                         <div className="flex-shrink-0">
-                          {getFileIcon(uploadFile.file.name)}
+                          {getFileIcon()}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">

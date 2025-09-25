@@ -20,7 +20,8 @@
       "Bash(npm run build:*)",
       "Bash(aws:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "mcp__playwright__browser_take_screenshot"
     ]
   },
   "enableAllProjectMcpServers": true,
