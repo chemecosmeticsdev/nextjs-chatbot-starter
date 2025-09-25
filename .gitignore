@@ -41,3 +41,9 @@ next-env.d.ts
 
 # OS generated files
 Thumbs.db
+
+# DeploymentDocs
+# /docs
+
+# schema
+/schema
