@@ -13,19 +13,42 @@ import {
 
 const languages = [
   { code: 'en', name: 'English', flag: '🇺🇸' },
-  { code: 'es', name: 'Español', flag: '🇪🇸' },
-  { code: 'fr', name: 'Français', flag: '🇫🇷' },
-  { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
-  { code: 'zh', name: '中文', flag: '🇨🇳' },
+  { code: 'th', name: 'ไทย', flag: '🇹🇭' },
 ]
 
 export function LanguageSwitcher() {
   const [currentLanguage, setCurrentLanguage] = React.useState('en')
 
+  React.useEffect(() => {
+    // Load saved language preference from localStorage
+    const savedLanguage = localStorage.getItem('preferred-language')
+    if (savedLanguage && languages.find(lang => lang.code === savedLanguage)) {
+      setCurrentLanguage(savedLanguage)
+    } else {
+      // Default to English for now (will be Thai when requested)
+      setCurrentLanguage('en')
+    }
+  }, [])
+
   const handleLanguageChange = (languageCode: string) => {
     setCurrentLanguage(languageCode)
-    // Here you would integrate with your i18n solution
+    // Save language preference to localStorage
+    localStorage.setItem('preferred-language', languageCode)
+
+    // Update user preference in database (placeholder for future API integration)
+    updateUserLanguagePreference(languageCode)
+
     console.log(`Language changed to: ${languageCode}`)
+  }
+
+  const updateUserLanguagePreference = async (languageCode: string) => {
+    try {
+      // Placeholder for API call to update user language preference
+      // This will be implemented when user profile API is ready
+      console.log(`Updating user language preference to: ${languageCode}`)
+    } catch (error) {
+      console.error('Failed to update language preference:', error)
+    }
   }
 
   const currentLang = languages.find(lang => lang.code === currentLanguage) || languages[0]
