@@ -30,8 +30,13 @@ import {
   Key,
   Lock,
   Mail,
-  Globe
+  Globe,
+  Palette,
+  Sun,
+  Moon,
+  Monitor
 } from 'lucide-react';
+import { useTheme } from 'next-themes';
 
 interface SystemSettings {
   database: {
@@ -67,6 +72,7 @@ interface SystemSettings {
 }
 
 export default function SettingsPage() {
+  const { theme, setTheme } = useTheme();
   const [settings, setSettings] = useState<SystemSettings>({
     database: {
       maxConnections: 100,
@@ -342,6 +348,92 @@ export default function SettingsPage() {
                   <Badge variant="secondary">Super Admin: 2</Badge>
                 </CardContent>
               </Card>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Theme & Appearance */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Palette className="h-5 w-5" />
+              Theme & Appearance
+            </CardTitle>
+            <CardDescription>
+              Customize the application theme and appearance
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>Theme Preference</Label>
+              <div className="grid grid-cols-3 gap-4">
+                <Button
+                  variant={theme === 'light' ? 'default' : 'outline'}
+                  onClick={() => setTheme('light')}
+                  className="flex items-center gap-2"
+                >
+                  <Sun className="h-4 w-4" />
+                  Light
+                </Button>
+                <Button
+                  variant={theme === 'dark' ? 'default' : 'outline'}
+                  onClick={() => setTheme('dark')}
+                  className="flex items-center gap-2"
+                >
+                  <Moon className="h-4 w-4" />
+                  Dark
+                </Button>
+                <Button
+                  variant={theme === 'system' ? 'default' : 'outline'}
+                  onClick={() => setTheme('system')}
+                  className="flex items-center gap-2"
+                >
+                  <Monitor className="h-4 w-4" />
+                  System
+                </Button>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Choose your preferred theme. System theme follows your device&apos;s appearance settings.
+              </p>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-2">
+              <Label>Color Scheme</Label>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-blue-500"></div>
+                  <span className="text-sm font-medium">Blue (Default)</span>
+                  <Badge variant="secondary">Current</Badge>
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Additional color schemes will be available in future updates.
+              </p>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-2">
+              <Label>Theme Preview</Label>
+              <div className="border rounded-lg p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-primary"></div>
+                  <span className="text-sm text-primary">Primary Color</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-secondary"></div>
+                  <span className="text-sm text-secondary-foreground">Secondary Color</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-muted"></div>
+                  <span className="text-sm text-muted-foreground">Muted Color</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Current theme: <span className="font-medium capitalize">{theme}</span>
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>

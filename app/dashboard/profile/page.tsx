@@ -15,8 +15,12 @@ import {
   Save,
   Bell,
   Globe,
-  Palette
+  Palette,
+  Sun,
+  Moon,
+  Monitor
 } from "lucide-react"
+import { useTheme } from "next-themes"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -69,6 +73,7 @@ interface Preferences {
 
 export default function ProfilePage() {
   const router = useRouter()
+  const { theme, setTheme } = useTheme()
   const [user, setUser] = React.useState<User | null>(null)
   const [loading, setLoading] = React.useState(true)
   const [saving, setSaving] = React.useState(false)
@@ -468,16 +473,47 @@ export default function ProfilePage() {
 
                 <div className="space-y-2">
                   <Label>Theme</Label>
-                  <Select value={preferences.theme} onValueChange={(value) => setPreferences(prev => ({ ...prev, theme: value }))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="light">Light</SelectItem>
-                      <SelectItem value="dark">Dark</SelectItem>
-                      <SelectItem value="system">System</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="grid grid-cols-3 gap-2">
+                    <Button
+                      variant={theme === 'light' ? 'default' : 'outline'}
+                      onClick={() => {
+                        setTheme('light')
+                        setPreferences(prev => ({ ...prev, theme: 'light' }))
+                      }}
+                      className="flex items-center gap-2"
+                      size="sm"
+                    >
+                      <Sun className="h-4 w-4" />
+                      Light
+                    </Button>
+                    <Button
+                      variant={theme === 'dark' ? 'default' : 'outline'}
+                      onClick={() => {
+                        setTheme('dark')
+                        setPreferences(prev => ({ ...prev, theme: 'dark' }))
+                      }}
+                      className="flex items-center gap-2"
+                      size="sm"
+                    >
+                      <Moon className="h-4 w-4" />
+                      Dark
+                    </Button>
+                    <Button
+                      variant={theme === 'system' ? 'default' : 'outline'}
+                      onClick={() => {
+                        setTheme('system')
+                        setPreferences(prev => ({ ...prev, theme: 'system' }))
+                      }}
+                      className="flex items-center gap-2"
+                      size="sm"
+                    >
+                      <Monitor className="h-4 w-4" />
+                      System
+                    </Button>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Current theme: <span className="font-medium capitalize">{theme}</span>
+                  </p>
                 </div>
               </div>
 
