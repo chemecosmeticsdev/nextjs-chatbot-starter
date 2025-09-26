@@ -5,9 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -16,143 +16,270 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  Database,
-  Shield,
-  Users,
-  Bell,
-  Wrench,
-  Save,
   AlertCircle,
   CheckCircle,
   Cloud,
   Server,
   Key,
-  Lock,
-  Globe,
-  Palette,
-  Sun,
-  Moon,
-  Monitor
+  Eye,
+  EyeOff,
+  Save,
+  Loader2,
+  RefreshCw
 } from 'lucide-react';
-import { useTheme } from 'next-themes';
+// Using alert fallback instead of toast
+import { z } from 'zod';
 
-interface SystemSettings {
-  database: {
-    maxConnections: number;
-    connectionTimeout: number;
-    queryTimeout: number;
-    maintenanceMode: boolean;
-  };
-  security: {
-    twoFactorEnabled: boolean;
-    apiRateLimit: number;
-    sessionTimeout: number;
-    passwordPolicy: string;
-  };
-  notifications: {
-    emailNotifications: boolean;
-    systemAlerts: boolean;
-    userRegistrations: boolean;
-    errorReports: boolean;
-  };
-  aws: {
-    region: string;
-    bedrockModel: string;
-    s3Bucket: string;
-    cognitoPoolId: string;
-  };
-  system: {
-    maintenanceMode: boolean;
-    debugMode: boolean;
-    logLevel: string;
-    backupFrequency: string;
-  };
+interface AdminSetting {
+  key: string;
+  value: any;
+  masked_value?: string;
+  description?: string;
+  is_sensitive: boolean;
+  updated_at: string;
+  updated_by_name?: string;
 }
 
-export default function SettingsPage() {
-  const { theme, setTheme } = useTheme();
-  const [settings, setSettings] = useState<SystemSettings>({
-    database: {
-      maxConnections: 100,
-      connectionTimeout: 30,
-      queryTimeout: 60,
-      maintenanceMode: false,
-    },
-    security: {
-      twoFactorEnabled: true,
-      apiRateLimit: 1000,
-      sessionTimeout: 24,
-      passwordPolicy: 'strong',
-    },
-    notifications: {
-      emailNotifications: true,
-      systemAlerts: true,
-      userRegistrations: false,
-      errorReports: true,
-    },
-    aws: {
-      region: 'ap-southeast-1',
-      bedrockModel: 'amazon.nova-micro-v1:0',
-      s3Bucket: 'chatbot-documents',
-      cognitoPoolId: '7p0uanoj10cg99u2qjpe1np74q',
-    },
-    system: {
-      maintenanceMode: false,
-      debugMode: false,
-      logLevel: 'info',
-      backupFrequency: 'daily',
-    },
-  });
+interface BedrockModel {
+  modelId: string;
+  modelName: string;
+  providerName: string;
+  description: string;
+}
 
+interface BedrockModelsResponse {
+  success: boolean;
+  models: BedrockModel[];
+  groupedModels: Record<string, BedrockModel[]>;
+}
+
+// Validation schemas
+const AdminSettingsSchema = z.object({
+  mistral_ocr_api_key: z.string().min(1, 'OCR API key is required'),
+  aws_bedrock_credentials: z.object({
+    accessKeyId: z.string().min(1, 'Access Key ID is required'),
+    secretAccessKey: z.string().min(1, 'Secret Access Key is required'),
+    region: z.string().min(1, 'Region is required')
+  }),
+  default_llm_model: z.string().min(1, 'Default LLM model is required'),
+  s3_document_bucket: z.string().min(1, 'S3 bucket name is required'),
+  embedding_model: z.string().min(1, 'Embedding model is required')
+});
+
+export default function SettingsPage() {
+  // Simple alert fallback instead of toast
+  const [settings, setSettings] = useState<Record<string, AdminSetting>>({});
+  const [bedrockModels, setBedrockModels] = useState<BedrockModel[]>([]);
+  const [formValues, setFormValues] = useState({
+    mistral_ocr_api_key: '',
+    aws_bedrock_credentials: {
+      accessKeyId: '',
+      secretAccessKey: '',
+      region: 'us-east-1'
+    },
+    default_llm_model: '',
+    s3_document_bucket: '',
+    embedding_model: 'amazon.titan-embed-text-v1'
+  });
+  const [showSensitive, setShowSensitive] = useState({
+    mistral_ocr_api_key: false,
+    aws_bedrock_credentials: false
+  });
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [userRole, setUserRole] = useState<string>('');
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    // Check user role for access control
-    const checkUserRole = async () => {
+    const initializeSettings = async () => {
       try {
-        const response = await fetch('/api/v1/auth/me');
-        const data = await response.json();
-        if (data.success && data.user.role === 'super_admin') {
-          setUserRole(data.user.role);
-        } else {
-          // Redirect if not super admin
+        // Check user role for access control
+        const authResponse = await fetch('/api/v1/auth/me');
+        const authData = await authResponse.json();
+
+        if (!authData.success || authData.user.role !== 'super_admin') {
           window.location.href = '/dashboard';
           return;
         }
+
+        setUserRole(authData.user.role);
+
+        // Load admin settings and Bedrock models in parallel
+        const [settingsResponse, modelsResponse] = await Promise.all([
+          fetch('/api/v1/settings'),
+          fetch('/api/v1/bedrock/models')
+        ]);
+
+        if (settingsResponse.ok) {
+          const settingsData = await settingsResponse.json();
+          if (settingsData.success) {
+            const settingsMap: Record<string, AdminSetting> = {};
+            settingsData.settings.forEach((setting: AdminSetting) => {
+              settingsMap[setting.key] = setting;
+            });
+            setSettings(settingsMap);
+
+            // Populate form with current values
+            setFormValues({
+              mistral_ocr_api_key: settingsMap.mistral_ocr_api_key?.value || '',
+              aws_bedrock_credentials: settingsMap.aws_bedrock_credentials?.value || {
+                accessKeyId: '',
+                secretAccessKey: '',
+                region: 'us-east-1'
+              },
+              default_llm_model: settingsMap.default_llm_model?.value || '',
+              s3_document_bucket: settingsMap.s3_document_bucket?.value || '',
+              embedding_model: settingsMap.embedding_model?.value || 'amazon.titan-embed-text-v1'
+            });
+          }
+        }
+
+        if (modelsResponse.ok) {
+          const modelsData: BedrockModelsResponse = await modelsResponse.json();
+          if (modelsData.success) {
+            setBedrockModels(modelsData.models);
+          }
+        }
+
       } catch (error) {
-        console.error('Auth check failed:', error);
-        window.location.href = '/dashboard';
-        return;
+        console.error('Failed to initialize settings:', error);
+        alert('Error: Failed to load admin settings');
+      } finally {
+        setLoading(false);
       }
     };
 
-    checkUserRole();
+    initializeSettings();
   }, []);
 
-  const handleSettingsChange = (section: keyof SystemSettings, key: string, value: any) => {
-    setSettings(prev => ({
+  const handleFieldChange = (field: string, value: any) => {
+    setFormValues(prev => ({
       ...prev,
-      [section]: {
-        ...prev[section],
-        [key]: value
+      [field]: value
+    }));
+
+    // Clear validation error when user starts typing
+    if (validationErrors[field]) {
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
+  };
+
+  const handleCredentialChange = (field: string, value: string) => {
+    setFormValues(prev => ({
+      ...prev,
+      aws_bedrock_credentials: {
+        ...prev.aws_bedrock_credentials,
+        [field]: value
       }
     }));
+
+    // Clear validation error
+    const errorKey = `aws_bedrock_credentials.${field}`;
+    if (validationErrors[errorKey]) {
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[errorKey];
+        return newErrors;
+      });
+    }
+  };
+
+  const validateForm = (): boolean => {
+    try {
+      AdminSettingsSchema.parse(formValues);
+      setValidationErrors({});
+      return true;
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const errors: Record<string, string> = {};
+        error.errors.forEach((err) => {
+          const path = err.path.join('.');
+          errors[path] = err.message;
+        });
+        setValidationErrors(errors);
+      }
+      return false;
+    }
   };
 
   const handleSave = async () => {
+    if (!validateForm()) {
+      alert('Validation Error: Please fix the errors before saving');
+      return;
+    }
+
     setSaving(true);
     try {
-      // Simulate API call to save settings
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      console.log('Settings saved:', settings);
-      // In real implementation, this would be an API call
-    } catch (error) {
+      // Save each setting individually
+      const settingsToSave = [
+        { key: 'mistral_ocr_api_key', value: formValues.mistral_ocr_api_key },
+        { key: 'aws_bedrock_credentials', value: formValues.aws_bedrock_credentials },
+        { key: 'default_llm_model', value: formValues.default_llm_model },
+        { key: 's3_document_bucket', value: formValues.s3_document_bucket },
+        { key: 'embedding_model', value: formValues.embedding_model }
+      ];
+
+      const savePromises = settingsToSave.map(async (setting) => {
+        const response = await fetch(`/api/v1/settings/${setting.key}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            value: setting.value,
+            description: getSettingDescription(setting.key)
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to save setting');
+        }
+
+        return response.json();
+      });
+
+      await Promise.all(savePromises);
+
+      alert('Success: Admin settings saved successfully');
+
+      // Reload settings to get updated values
+      window.location.reload();
+
+    } catch (error: any) {
       console.error('Failed to save settings:', error);
+      alert('Error: ' + (error.message || 'Failed to save settings'));
     } finally {
       setSaving(false);
     }
   };
+
+  const getSettingDescription = (key: string): string => {
+    const descriptions = {
+      mistral_ocr_api_key: 'Mistral API key for OCR text extraction',
+      aws_bedrock_credentials: 'AWS Bedrock service credentials for LLM operations',
+      default_llm_model: 'Default LLM model for chatbot classification tasks',
+      s3_document_bucket: 'S3 bucket for storing uploaded documents',
+      embedding_model: 'Embedding model for vector search (read-only)'
+    };
+    return descriptions[key as keyof typeof descriptions] || '';
+  };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="text-center">
+          <Loader2 className="mx-auto h-8 w-8 animate-spin text-muted-foreground mb-4" />
+          <p className="text-muted-foreground">Loading admin settings...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Show access denied for non-super admin users
   if (!userRole) {
@@ -180,424 +307,269 @@ export default function SettingsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">System Settings</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Admin Settings</h1>
           <p className="text-muted-foreground">
-            Configure system-wide settings and preferences
+            Configure system-wide admin settings and API keys
           </p>
         </div>
         <div className="flex items-center space-x-2">
           <Button onClick={handleSave} disabled={saving}>
-            <Save className="mr-2 h-4 w-4" />
+            {saving ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="mr-2 h-4 w-4" />
+            )}
             {saving ? 'Saving...' : 'Save Changes'}
           </Button>
         </div>
       </div>
 
       <div className="grid gap-6">
-        {/* Database Configuration */}
+        {/* Mistral OCR API Key */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Database className="h-5 w-5" />
-              Database Configuration
+              <Key className="h-5 w-5" />
+              Mistral OCR Configuration
             </CardTitle>
             <CardDescription>
-              Manage database connections and performance settings
+              Configure Mistral API key for OCR text extraction from documents
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="maxConnections">Max Connections</Label>
+            <div className="space-y-2">
+              <Label htmlFor="mistral_ocr_api_key">OCR API Key</Label>
+              <div className="flex items-center space-x-2">
                 <Input
-                  id="maxConnections"
-                  type="number"
-                  value={settings.database.maxConnections}
-                  onChange={(e) => handleSettingsChange('database', 'maxConnections', parseInt(e.target.value))}
+                  id="mistral_ocr_api_key"
+                  type={showSensitive.mistral_ocr_api_key ? "text" : "password"}
+                  value={formValues.mistral_ocr_api_key}
+                  onChange={(e) => handleFieldChange('mistral_ocr_api_key', e.target.value)}
+                  placeholder="Enter Mistral OCR API key"
+                  className={validationErrors.mistral_ocr_api_key ? "border-red-500" : ""}
                 />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setShowSensitive(prev => ({
+                    ...prev,
+                    mistral_ocr_api_key: !prev.mistral_ocr_api_key
+                  }))}
+                >
+                  {showSensitive.mistral_ocr_api_key ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="connectionTimeout">Connection Timeout (seconds)</Label>
-                <Input
-                  id="connectionTimeout"
-                  type="number"
-                  value={settings.database.connectionTimeout}
-                  onChange={(e) => handleSettingsChange('database', 'connectionTimeout', parseInt(e.target.value))}
-                />
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label className="font-medium">Maintenance Mode</Label>
+              {validationErrors.mistral_ocr_api_key && (
+                <p className="text-sm text-red-600">{validationErrors.mistral_ocr_api_key}</p>
+              )}
+              {settings.mistral_ocr_api_key && !showSensitive.mistral_ocr_api_key && (
                 <p className="text-sm text-muted-foreground">
-                  Enable maintenance mode for database operations
+                  Current: {settings.mistral_ocr_api_key.masked_value}
+                  {settings.mistral_ocr_api_key.updated_by_name && (
+                    <span> • Last updated by {settings.mistral_ocr_api_key.updated_by_name}</span>
+                  )}
                 </p>
-              </div>
-              <Switch
-                checked={settings.database.maintenanceMode}
-                onCheckedChange={(checked) => handleSettingsChange('database', 'maintenanceMode', checked)}
-              />
+              )}
             </div>
           </CardContent>
         </Card>
 
-        {/* Security Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5" />
-              Security Settings
-            </CardTitle>
-            <CardDescription>
-              Configure security policies and access controls
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="apiRateLimit">API Rate Limit (requests/hour)</Label>
-                <Input
-                  id="apiRateLimit"
-                  type="number"
-                  value={settings.security.apiRateLimit}
-                  onChange={(e) => handleSettingsChange('security', 'apiRateLimit', parseInt(e.target.value))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="sessionTimeout">Session Timeout (hours)</Label>
-                <Input
-                  id="sessionTimeout"
-                  type="number"
-                  value={settings.security.sessionTimeout}
-                  onChange={(e) => handleSettingsChange('security', 'sessionTimeout', parseInt(e.target.value))}
-                />
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label className="font-medium">Two-Factor Authentication</Label>
-                <p className="text-sm text-muted-foreground">
-                  Require 2FA for admin accounts
-                </p>
-              </div>
-              <Switch
-                checked={settings.security.twoFactorEnabled}
-                onCheckedChange={(checked) => handleSettingsChange('security', 'twoFactorEnabled', checked)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="passwordPolicy">Password Policy</Label>
-              <Select
-                value={settings.security.passwordPolicy}
-                onValueChange={(value) => handleSettingsChange('security', 'passwordPolicy', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select password policy" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="basic">Basic (8 characters)</SelectItem>
-                  <SelectItem value="strong">Strong (12 chars, mixed case, numbers)</SelectItem>
-                  <SelectItem value="enterprise">Enterprise (16 chars, symbols required)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* User Management */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              User Management
-            </CardTitle>
-            <CardDescription>
-              Control user registration and account policies
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-3 gap-4">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">Total Users</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">127</div>
-                  <Badge variant="secondary">+5 this week</Badge>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">Active Sessions</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">42</div>
-                  <Badge variant="secondary">Online now</Badge>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">Admin Users</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">8</div>
-                  <Badge variant="secondary">Super Admin: 2</Badge>
-                </CardContent>
-              </Card>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Theme & Appearance */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Palette className="h-5 w-5" />
-              Theme & Appearance
-            </CardTitle>
-            <CardDescription>
-              Customize the application theme and appearance
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Theme Preference</Label>
-              <div className="grid grid-cols-3 gap-4">
-                <Button
-                  variant={theme === 'light' ? 'default' : 'outline'}
-                  onClick={() => setTheme('light')}
-                  className="flex items-center gap-2"
-                >
-                  <Sun className="h-4 w-4" />
-                  Light
-                </Button>
-                <Button
-                  variant={theme === 'dark' ? 'default' : 'outline'}
-                  onClick={() => setTheme('dark')}
-                  className="flex items-center gap-2"
-                >
-                  <Moon className="h-4 w-4" />
-                  Dark
-                </Button>
-                <Button
-                  variant={theme === 'system' ? 'default' : 'outline'}
-                  onClick={() => setTheme('system')}
-                  className="flex items-center gap-2"
-                >
-                  <Monitor className="h-4 w-4" />
-                  System
-                </Button>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Choose your preferred theme. System theme follows your device&apos;s appearance settings.
-              </p>
-            </div>
-
-            <Separator />
-
-            <div className="space-y-2">
-              <Label>Color Scheme</Label>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded-full bg-blue-500"></div>
-                  <span className="text-sm font-medium">Blue (Default)</span>
-                  <Badge variant="secondary">Current</Badge>
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Additional color schemes will be available in future updates.
-              </p>
-            </div>
-
-            <Separator />
-
-            <div className="space-y-2">
-              <Label>Theme Preview</Label>
-              <div className="border rounded-lg p-4 space-y-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-primary"></div>
-                  <span className="text-sm text-primary">Primary Color</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-secondary"></div>
-                  <span className="text-sm text-secondary-foreground">Secondary Color</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-muted"></div>
-                  <span className="text-sm text-muted-foreground">Muted Color</span>
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Current theme: <span className="font-medium capitalize">{theme}</span>
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* AWS Configuration */}
+        {/* AWS Bedrock Credentials */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Cloud className="h-5 w-5" />
-              AWS Configuration
+              AWS Bedrock Credentials
             </CardTitle>
             <CardDescription>
-              AWS services configuration and status
+              Configure AWS credentials for Bedrock LLM services
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Primary Region</Label>
-                <div className="flex items-center gap-2">
-                  <Globe className="h-4 w-4" />
-                  <span className="font-medium">{settings.aws.region}</span>
-                  <Badge variant="secondary">Active</Badge>
+                <Label htmlFor="aws_access_key">Access Key ID</Label>
+                <div className="flex items-center space-x-2">
+                  <Input
+                    id="aws_access_key"
+                    type={showSensitive.aws_bedrock_credentials ? "text" : "password"}
+                    value={formValues.aws_bedrock_credentials.accessKeyId}
+                    onChange={(e) => handleCredentialChange('accessKeyId', e.target.value)}
+                    placeholder="AKIA..."
+                    className={validationErrors['aws_bedrock_credentials.accessKeyId'] ? "border-red-500" : ""}
+                  />
                 </div>
+                {validationErrors['aws_bedrock_credentials.accessKeyId'] && (
+                  <p className="text-sm text-red-600">{validationErrors['aws_bedrock_credentials.accessKeyId']}</p>
+                )}
               </div>
               <div className="space-y-2">
-                <Label>Bedrock Model</Label>
-                <div className="flex items-center gap-2">
-                  <Key className="h-4 w-4" />
-                  <span className="font-medium">{settings.aws.bedrockModel}</span>
-                  <Badge variant="secondary">Connected</Badge>
+                <Label htmlFor="aws_secret_key">Secret Access Key</Label>
+                <div className="flex items-center space-x-2">
+                  <Input
+                    id="aws_secret_key"
+                    type={showSensitive.aws_bedrock_credentials ? "text" : "password"}
+                    value={formValues.aws_bedrock_credentials.secretAccessKey}
+                    onChange={(e) => handleCredentialChange('secretAccessKey', e.target.value)}
+                    placeholder="Enter secret key"
+                    className={validationErrors['aws_bedrock_credentials.secretAccessKey'] ? "border-red-500" : ""}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setShowSensitive(prev => ({
+                      ...prev,
+                      aws_bedrock_credentials: !prev.aws_bedrock_credentials
+                    }))}
+                  >
+                    {showSensitive.aws_bedrock_credentials ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
                 </div>
+                {validationErrors['aws_bedrock_credentials.secretAccessKey'] && (
+                  <p className="text-sm text-red-600">{validationErrors['aws_bedrock_credentials.secretAccessKey']}</p>
+                )}
               </div>
             </div>
-            <Separator />
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>S3 Bucket</Label>
-                <div className="flex items-center gap-2">
-                  <Server className="h-4 w-4" />
-                  <span className="font-medium">{settings.aws.s3Bucket}</span>
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Cognito Pool</Label>
-                <div className="flex items-center gap-2">
-                  <Lock className="h-4 w-4" />
-                  <span className="font-medium">{settings.aws.cognitoPoolId}</span>
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                </div>
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="aws_region">Bedrock Region</Label>
+              <Select
+                value={formValues.aws_bedrock_credentials.region}
+                onValueChange={(value) => handleCredentialChange('region', value)}
+              >
+                <SelectTrigger className={validationErrors['aws_bedrock_credentials.region'] ? "border-red-500" : ""}>
+                  <SelectValue placeholder="Select AWS region for Bedrock" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="us-east-1">US East (N. Virginia)</SelectItem>
+                  <SelectItem value="us-west-2">US West (Oregon)</SelectItem>
+                  <SelectItem value="eu-west-1">Europe (Ireland)</SelectItem>
+                  <SelectItem value="ap-southeast-1">Asia Pacific (Singapore)</SelectItem>
+                </SelectContent>
+              </Select>
+              {validationErrors['aws_bedrock_credentials.region'] && (
+                <p className="text-sm text-red-600">{validationErrors['aws_bedrock_credentials.region']}</p>
+              )}
             </div>
+            {settings.aws_bedrock_credentials && !showSensitive.aws_bedrock_credentials && (
+              <div className="p-3 bg-muted rounded-lg text-sm">
+                <p className="font-medium">Current Configuration:</p>
+                <p>Access Key: {settings.aws_bedrock_credentials.masked_value?.accessKeyId || '***masked***'}</p>
+                <p>Region: {formValues.aws_bedrock_credentials.region}</p>
+                {settings.aws_bedrock_credentials.updated_by_name && (
+                  <p className="text-muted-foreground mt-1">
+                    Last updated by {settings.aws_bedrock_credentials.updated_by_name}
+                  </p>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        {/* System Notifications */}
+        {/* Default LLM Model */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Bell className="h-5 w-5" />
-              Notifications
+              <Server className="h-5 w-5" />
+              Default LLM Model
             </CardTitle>
             <CardDescription>
-              Configure system notifications and alerts
+              Select the default language model for chatbot classification tasks
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="font-medium">Email Notifications</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Send system alerts via email
-                  </p>
-                </div>
-                <Switch
-                  checked={settings.notifications.emailNotifications}
-                  onCheckedChange={(checked) => handleSettingsChange('notifications', 'emailNotifications', checked)}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="font-medium">System Alerts</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Real-time system status alerts
-                  </p>
-                </div>
-                <Switch
-                  checked={settings.notifications.systemAlerts}
-                  onCheckedChange={(checked) => handleSettingsChange('notifications', 'systemAlerts', checked)}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="font-medium">User Registration Alerts</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Notify when new users register
-                  </p>
-                </div>
-                <Switch
-                  checked={settings.notifications.userRegistrations}
-                  onCheckedChange={(checked) => handleSettingsChange('notifications', 'userRegistrations', checked)}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* System Maintenance */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Wrench className="h-5 w-5" />
-              System Maintenance
-            </CardTitle>
-            <CardDescription>
-              System maintenance and diagnostic settings
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label className="font-medium">Maintenance Mode</Label>
+            <div className="space-y-2">
+              <Label htmlFor="default_llm_model">LLM Model</Label>
+              <Select
+                value={formValues.default_llm_model}
+                onValueChange={(value) => handleFieldChange('default_llm_model', value)}
+              >
+                <SelectTrigger className={validationErrors.default_llm_model ? "border-red-500" : ""}>
+                  <SelectValue placeholder="Select default LLM model" />
+                </SelectTrigger>
+                <SelectContent>
+                  {bedrockModels.map((model) => (
+                    <SelectItem key={model.modelId} value={model.modelId}>
+                      <div className="flex flex-col">
+                        <span>{model.modelName}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {model.providerName} • {model.modelId}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {validationErrors.default_llm_model && (
+                <p className="text-sm text-red-600">{validationErrors.default_llm_model}</p>
+              )}
+              {formValues.default_llm_model && (
                 <p className="text-sm text-muted-foreground">
-                  Put the system in maintenance mode
+                  {bedrockModels.find(m => m.modelId === formValues.default_llm_model)?.description}
                 </p>
-              </div>
-              <Switch
-                checked={settings.system.maintenanceMode}
-                onCheckedChange={(checked) => handleSettingsChange('system', 'maintenanceMode', checked)}
-              />
+              )}
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="logLevel">Log Level</Label>
-                <Select
-                  value={settings.system.logLevel}
-                  onValueChange={(value) => handleSettingsChange('system', 'logLevel', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select log level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="debug">Debug</SelectItem>
-                    <SelectItem value="info">Info</SelectItem>
-                    <SelectItem value="warn">Warning</SelectItem>
-                    <SelectItem value="error">Error</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="backupFrequency">Backup Frequency</Label>
-                <Select
-                  value={settings.system.backupFrequency}
-                  onValueChange={(value) => handleSettingsChange('system', 'backupFrequency', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select backup frequency" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="hourly">Hourly</SelectItem>
-                    <SelectItem value="daily">Daily</SelectItem>
-                    <SelectItem value="weekly">Weekly</SelectItem>
-                    <SelectItem value="monthly">Monthly</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+          </CardContent>
+        </Card>
+
+        {/* S3 Document Bucket */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Server className="h-5 w-5" />
+              Document Storage
+            </CardTitle>
+            <CardDescription>
+              Configure S3 bucket for document storage and processing
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="s3_document_bucket">S3 Bucket Name</Label>
+              <Input
+                id="s3_document_bucket"
+                type="text"
+                value={formValues.s3_document_bucket}
+                onChange={(e) => handleFieldChange('s3_document_bucket', e.target.value)}
+                placeholder="my-documents-bucket"
+                className={validationErrors.s3_document_bucket ? "border-red-500" : ""}
+              />
+              {validationErrors.s3_document_bucket && (
+                <p className="text-sm text-red-600">{validationErrors.s3_document_bucket}</p>
+              )}
+              <p className="text-sm text-muted-foreground">
+                Enter the S3 bucket name where uploaded documents will be stored
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Embedding Model (Read-only) */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Server className="h-5 w-5" />
+              Vector Embeddings
+            </CardTitle>
+            <CardDescription>
+              Embedding model configuration for document search (read-only)
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="embedding_model">Embedding Model</Label>
+              <Input
+                id="embedding_model"
+                type="text"
+                value={formValues.embedding_model}
+                disabled
+                className="bg-muted"
+              />
+              <p className="text-sm text-muted-foreground">
+                This model is used for generating vector embeddings for document search.
+                Contact system administrator to change this setting.
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -609,20 +581,24 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent className="text-sm space-y-2">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Application Version:</span>
-              <span>v1.0.0</span>
+              <span className="text-muted-foreground">Database Connection:</span>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <span>Connected</span>
+              </div>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Database Version:</span>
-              <span>PostgreSQL 15.4</span>
+              <span className="text-muted-foreground">Settings Count:</span>
+              <span>{Object.keys(settings).length} configured</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Last Backup:</span>
-              <span>2024-09-25 06:00 UTC</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">System Uptime:</span>
-              <span>15 days, 7 hours</span>
+              <span className="text-muted-foreground">Last Modified:</span>
+              <span>
+                {settings.default_llm_model?.updated_at ?
+                  new Date(settings.default_llm_model.updated_at).toLocaleDateString() :
+                  'Never'
+                }
+              </span>
             </div>
           </CardContent>
         </Card>

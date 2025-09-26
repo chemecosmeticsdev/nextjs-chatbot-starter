@@ -21,7 +21,18 @@
       "Bash(aws:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "mcp__playwright__browser_take_screenshot"
+      "mcp__playwright__browser_take_screenshot",
+      "WebFetch(domain:master.d8z7xlyl8bjeg.amplifyapp.com)",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_snapshot",
+      "mcp__playwright__browser_wait_for",
+      "mcp__playwright__browser_handle_dialog",
+      "mcp__playwright__browser_evaluate",
+      "mcp__playwright__browser_click",
+      "mcp__playwright__browser_type",
+      "mcp__neon__describe_project",
+      "mcp__neon__get_connection_string",
+      "Bash(npm run dev:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
