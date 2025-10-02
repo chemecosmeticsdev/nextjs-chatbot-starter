@@ -1,5 +1,5 @@
 import { eq, sql, inArray } from 'drizzle-orm';
-import { db } from './connection';
+import { db } from './';
 import {
   systemSettings,
   users,

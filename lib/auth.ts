@@ -56,6 +56,32 @@ export class AuthTokenService {
 
     return token;
   }
+
+  static async verifyRequest(request: Request): Promise<SessionData | null> {
+    // Extract token from Authorization header
+    const authHeader = request.headers.get('authorization');
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      return await this.verifySession(token);
+    }
+
+    // Extract token from cookies as fallback
+    const cookieHeader = request.headers.get('cookie');
+    if (cookieHeader) {
+      const cookies = cookieHeader.split(';').reduce((acc: Record<string, string>, cookie) => {
+        const [name, value] = cookie.trim().split('=');
+        acc[name] = value;
+        return acc;
+      }, {});
+
+      const sessionToken = cookies['session'];
+      if (sessionToken) {
+        return await this.verifySession(sessionToken);
+      }
+    }
+
+    return null;
+  }
 }
 
 export function getSessionCookieOptions() {

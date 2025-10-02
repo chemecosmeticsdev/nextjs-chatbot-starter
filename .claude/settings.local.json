@@ -32,7 +32,8 @@
       "mcp__playwright__browser_type",
       "mcp__neon__describe_project",
       "mcp__neon__get_connection_string",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "mcp__playwright__browser_console_messages"
     ]
   },
   "enableAllProjectMcpServers": true,

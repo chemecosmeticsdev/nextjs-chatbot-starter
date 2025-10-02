@@ -10,6 +10,7 @@ import {
   FileText,
   Bot,
   Home,
+  Search,
 } from "lucide-react"
 
 import {
@@ -71,6 +72,12 @@ export function AppSidebar({ user }: AppSidebarProps) {
           isActive: pathname === "/dashboard/documents/upload",
         },
       ] : undefined,
+    },
+    {
+      title: "Knowledge Base",
+      url: "/dashboard/knowledge-base",
+      icon: Search,
+      isVisible: user.role === 'admin' || user.role === 'super_admin',
     },
     {
       title: "Analytics",

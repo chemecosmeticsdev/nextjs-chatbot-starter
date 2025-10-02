@@ -40,8 +40,35 @@ process.env.NEXTAUTH_SECRET = 'test-secret'
 process.env.NEXTAUTH_URL = 'http://localhost:3000'
 process.env.NODE_ENV = 'test'
 
-// Global test utilities
+// Global test utilities and Web API polyfills
 global.fetch = jest.fn()
+
+// Polyfill Next.js Web APIs for testing
+import { TextEncoder, TextDecoder } from 'util'
+global.TextEncoder = TextEncoder
+global.TextDecoder = TextDecoder
+
+// Polyfill URL for Node.js
+if (!global.URL) {
+  global.URL = require('url').URL
+}
+
+// Polyfill Request and Response for API route testing
+if (!global.Request) {
+  const { Request } = require('node-fetch')
+  global.Request = Request
+}
+
+if (!global.Response) {
+  const { Response } = require('node-fetch')
+  global.Response = Response
+}
+
+// Polyfill Headers
+if (!global.Headers) {
+  const { Headers } = require('node-fetch')
+  global.Headers = Headers
+}
 
 // Mock console methods in tests to reduce noise
 const originalError = console.error

@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Bot, Plus, Settings, Play, Pause, MoreHorizontal, MessageCircle, Users, Clock } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Bot, Plus, Settings, Play, Pause, MoreHorizontal, MessageCircle, Users, Clock, AlertCircle, RefreshCw, FileText } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,93 +17,147 @@ import {
 interface Chatbot {
   id: string;
   name: string;
-  description: string;
-  status: 'active' | 'inactive' | 'training';
-  model: string;
-  conversations: number;
-  users: number;
-  lastActive: string;
+  description: string | null;
+  status: 'active' | 'inactive' | 'testing';
+  apiKeyHint: string;
+  configuration: {
+    model: string;
+    temperature: number;
+    maxTokens: number;
+    language: string;
+    responseTimeout: number;
+  };
+  conversationCount: number;
+  userCount: number;
+  lastActivity: string | null;
   createdAt: string;
+  updatedAt: string;
+}
+
+interface ChatbotListResponse {
+  success: boolean;
+  data: {
+    chatbots: Chatbot[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  };
 }
 
 export default function ChatbotsPage() {
+  const router = useRouter();
   const [chatbots, setChatbots] = useState<Chatbot[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 20,
+    total: 0,
+    totalPages: 0
+  });
+
+  const fetchChatbots = async (page = 1) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch(`/api/v1/chatbots?page=${page}&limit=20`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // Include session cookies
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Authentication required. Please log in.');
+        }
+        throw new Error(`Failed to fetch chatbots: ${response.statusText}`);
+      }
+
+      const data: ChatbotListResponse = await response.json();
+
+      if (!data.success) {
+        throw new Error('Failed to load chatbots');
+      }
+
+      setChatbots(data.data.chatbots);
+      setPagination(data.data.pagination);
+    } catch (err: any) {
+      console.error('Error fetching chatbots:', err);
+      setError(err.message || 'Failed to load chatbots');
+      setChatbots([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    // Simulate loading chatbots
-    setTimeout(() => {
-      setChatbots([
-        {
-          id: '1',
-          name: 'Customer Support Bot',
-          description: 'Handles customer inquiries and support tickets',
-          status: 'active',
-          model: 'gpt-4',
-          conversations: 1247,
-          users: 389,
-          lastActive: '2 minutes ago',
-          createdAt: '2024-01-10'
-        },
-        {
-          id: '2',
-          name: 'Sales Assistant',
-          description: 'Helps with product information and sales inquiries',
-          status: 'active',
-          model: 'gpt-3.5-turbo',
-          conversations: 892,
-          users: 156,
-          lastActive: '5 minutes ago',
-          createdAt: '2024-01-08'
-        },
-        {
-          id: '3',
-          name: 'Technical Documentation Bot',
-          description: 'Provides technical documentation and API help',
-          status: 'training',
-          model: 'gpt-4',
-          conversations: 234,
-          users: 67,
-          lastActive: '1 hour ago',
-          createdAt: '2024-01-12'
-        },
-        {
-          id: '4',
-          name: 'HR Assistant',
-          description: 'Internal HR support and policy information',
-          status: 'inactive',
-          model: 'gpt-3.5-turbo',
-          conversations: 45,
-          users: 12,
-          lastActive: '2 days ago',
-          createdAt: '2024-01-05'
-        }
-      ]);
-      setLoading(false);
-    }, 1000);
+    fetchChatbots();
   }, []);
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: 'active' | 'inactive' | 'testing') => {
     switch (status) {
       case 'active':
         return <Badge className="bg-green-100 text-green-800">Active</Badge>;
       case 'inactive':
         return <Badge className="bg-gray-100 text-gray-800">Inactive</Badge>;
-      case 'training':
-        return <Badge className="bg-blue-100 text-blue-800">Training</Badge>;
+      case 'testing':
+        return <Badge className="bg-blue-100 text-blue-800">Testing</Badge>;
       default:
         return <Badge>Unknown</Badge>;
     }
   };
 
-  const toggleStatus = (id: string) => {
-    setChatbots(prev => prev.map(bot => {
-      if (bot.id === id) {
-        const newStatus = bot.status === 'active' ? 'inactive' : 'active';
-        return { ...bot, status: newStatus };
+  const toggleStatus = async (id: string, currentStatus: 'active' | 'inactive' | 'testing') => {
+    try {
+      const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+
+      const response = await fetch(`/api/v1/chatbots/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update chatbot status');
       }
-      return bot;
-    }));
+
+      // Refresh the chatbots list
+      await fetchChatbots(pagination.page);
+    } catch (err: any) {
+      console.error('Error updating chatbot status:', err);
+      setError(err.message || 'Failed to update chatbot status');
+    }
+  };
+
+  const formatLastActivity = (lastActivity: string | null): string => {
+    if (!lastActivity) return 'Never';
+
+    const date = new Date(lastActivity);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffMinutes < 1) return 'Just now';
+    if (diffMinutes < 60) return `${diffMinutes} minutes ago`;
+    if (diffHours < 24) return `${diffHours} hours ago`;
+    if (diffDays < 30) return `${diffDays} days ago`;
+
+    return date.toLocaleDateString();
+  };
+
+  const formatCreatedDate = (createdAt: string): string => {
+    return new Date(createdAt).toLocaleDateString();
   };
 
   return (
@@ -113,13 +169,36 @@ export default function ChatbotsPage() {
             Manage and monitor your AI chatbots
           </p>
         </div>
-        <Button asChild>
-          <a href="/dashboard/chatbots/create">
-            <Plus className="mr-2 h-4 w-4" />
-            Create Chatbot
-          </a>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => fetchChatbots(pagination.page)}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Refresh
+          </Button>
+          <Button asChild>
+            <a href="/dashboard/chatbots/create">
+              <Plus className="mr-2 h-4 w-4" />
+              Create Chatbot
+            </a>
+          </Button>
+        </div>
       </div>
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            {error}
+            <Button
+              variant="outline"
+              size="sm"
+              className="ml-2"
+              onClick={() => fetchChatbots(pagination.page)}
+            >
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
@@ -128,9 +207,9 @@ export default function ChatbotsPage() {
             <Bot className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{chatbots.length}</div>
+            <div className="text-2xl font-bold">{pagination.total}</div>
             <p className="text-xs text-muted-foreground">
-              +1 from last month
+              Across all pages
             </p>
           </CardContent>
         </Card>
@@ -155,10 +234,10 @@ export default function ChatbotsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {chatbots.reduce((sum, bot) => sum + bot.conversations, 0).toLocaleString()}
+              {chatbots.reduce((sum, bot) => sum + bot.conversationCount, 0).toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground">
-              +12% from last month
+              All time
             </p>
           </CardContent>
         </Card>
@@ -169,10 +248,10 @@ export default function ChatbotsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {chatbots.reduce((sum, bot) => sum + bot.users, 0)}
+              {chatbots.reduce((sum, bot) => sum + bot.userCount, 0)}
             </div>
             <p className="text-xs text-muted-foreground">
-              +8% from last month
+              All time
             </p>
           </CardContent>
         </Card>
@@ -222,11 +301,15 @@ export default function ChatbotsPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => router.push(`/dashboard/chatbots/${bot.id}/prompt`)}>
+                            <FileText className="mr-2 h-4 w-4" />
+                            Manage Prompts
+                          </DropdownMenuItem>
                           <DropdownMenuItem>
                             <Settings className="mr-2 h-4 w-4" />
                             Configure
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => toggleStatus(bot.id)}>
+                          <DropdownMenuItem onClick={() => toggleStatus(bot.id, bot.status)}>
                             {bot.status === 'active' ? (
                               <>
                                 <Pause className="mr-2 h-4 w-4" />
@@ -248,25 +331,25 @@ export default function ChatbotsPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center text-sm text-muted-foreground">
-                    <span>Model: {bot.model}</span>
+                    <span>Model: {bot.configuration.model}</span>
                     <span className="mx-2">•</span>
-                    <span>Created {bot.createdAt}</span>
+                    <span>Created {formatCreatedDate(bot.createdAt)}</span>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-blue-600">{bot.conversations}</div>
+                      <div className="text-2xl font-bold text-blue-600">{bot.conversationCount}</div>
                       <div className="text-xs text-muted-foreground">Conversations</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-green-600">{bot.users}</div>
+                      <div className="text-2xl font-bold text-green-600">{bot.userCount}</div>
                       <div className="text-xs text-muted-foreground">Users</div>
                     </div>
                   </div>
 
                   <div className="flex items-center text-xs text-muted-foreground">
                     <Clock className="mr-1 h-3 w-3" />
-                    Last active {bot.lastActive}
+                    Last active {formatLastActivity(bot.lastActivity)}
                   </div>
 
                   <div className="flex gap-2">
@@ -283,24 +366,75 @@ export default function ChatbotsPage() {
               </Card>
             ))}
 
-            {/* Create New Chatbot Card */}
-            <Card className="border-dashed border-2 hover:border-gray-400 transition-colors">
-              <CardContent className="flex flex-col items-center justify-center h-full min-h-[300px] text-center">
-                <div className="p-4 bg-blue-100 rounded-full mb-4">
-                  <Plus className="h-8 w-8 text-blue-600" />
-                </div>
-                <h3 className="text-lg font-semibold mb-2">Create New Chatbot</h3>
+            {/* Create New Chatbot Card - only show if not loading and not in error state */}
+            {!loading && !error && (
+              <Card className="border-dashed border-2 hover:border-gray-400 transition-colors">
+                <CardContent className="flex flex-col items-center justify-center h-full min-h-[300px] text-center">
+                  <div className="p-4 bg-blue-100 rounded-full mb-4">
+                    <Plus className="h-8 w-8 text-blue-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold mb-2">Create New Chatbot</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Set up a new AI chatbot for your specific use case
+                  </p>
+                  <Button asChild>
+                    <a href="/dashboard/chatbots/create">Get Started</a>
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* No chatbots message */}
+            {!loading && !error && chatbots.length === 0 && (
+              <div className="col-span-full flex flex-col items-center justify-center py-12 text-center">
+                <Bot className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No chatbots found</h3>
                 <p className="text-muted-foreground mb-4">
-                  Set up a new AI chatbot for your specific use case
+                  Get started by creating your first AI chatbot
                 </p>
                 <Button asChild>
-                  <a href="/dashboard/chatbots/create">Get Started</a>
+                  <a href="/dashboard/chatbots/create">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create Chatbot
+                  </a>
                 </Button>
-              </CardContent>
-            </Card>
+              </div>
+            )}
           </>
         )}
       </div>
+
+      {/* Pagination */}
+      {!loading && !error && pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-muted-foreground">
+            Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
+            {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
+            {pagination.total} chatbots
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchChatbots(pagination.page - 1)}
+              disabled={pagination.page <= 1}
+            >
+              Previous
+            </Button>
+            <span className="text-sm">
+              Page {pagination.page} of {pagination.totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchChatbots(pagination.page + 1)}
+              disabled={pagination.page >= pagination.totalPages}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

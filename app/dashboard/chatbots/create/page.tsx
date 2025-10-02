@@ -46,10 +46,51 @@ export default function CreateChatbotPage() {
     if (step > 1) setStep(step - 1);
   };
 
-  const handleSubmit = () => {
-    console.log('Creating chatbot:', formData);
-    // Here you would normally submit to an API
-    alert('Chatbot created successfully!');
+  const handleSubmit = async () => {
+    try {
+      console.log('Creating chatbot:', formData);
+
+      // Transform form data to match API expectations
+      const apiData = {
+        name: formData.name,
+        description: formData.description,
+        configuration: {
+          model: formData.model,
+          temperature: formData.temperature,
+          maxTokens: formData.maxTokens
+        },
+        currentSystemPrompt: formData.systemPrompt,
+        knowledgeSourceFilters: {
+          // Transform boolean features to proper schema structure
+          categories: formData.knowledgeBase ? [] : undefined,
+          suppliers: formData.contextMemory ? [] : undefined,
+          documentTypes: formData.webSearch ? [] : undefined,
+          tags: formData.imageProcessing ? [] : undefined
+        }
+      };
+
+      const response = await fetch('/api/v1/chatbots', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(apiData),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        alert('Chatbot created successfully!');
+        // Redirect to the chatbots list
+        window.location.href = '/dashboard/chatbots';
+      } else {
+        console.error('API Error:', result);
+        alert(`Error creating chatbot: ${result.error?.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Request failed:', error);
+      alert('Failed to create chatbot. Please try again.');
+    }
   };
 
   return (
