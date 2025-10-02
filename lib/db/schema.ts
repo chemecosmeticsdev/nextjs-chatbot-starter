@@ -559,13 +559,14 @@ export const systemConfigs = pgTable('system_configs', {
 });
 
 // Composite indexes for performance
-export const lineOaConfigsIndex = index('idx_line_oa_configs_chatbot').on(lineOaConfigs.chatbotId);
-export const widgetConfigsIndex = index('idx_widget_configs_chatbot').on(chatbotWidgetConfigs.chatbotId);
-export const translationsIndex = index('idx_translations_chatbot_lang').on(chatbotTranslations.chatbotId, chatbotTranslations.languageCode);
-export const translationsKeyIndex = index('idx_translations_key_lang').on(chatbotTranslations.translationKey, chatbotTranslations.languageCode);
-export const auditLogUserIndex = index('idx_audit_log_user_created').on(securityAuditLog.userId, securityAuditLog.createdAt);
-export const auditLogChatbotIndex = index('idx_audit_log_chatbot_created').on(securityAuditLog.chatbotId, securityAuditLog.createdAt);
-export const systemConfigsCategoryIndex = index('idx_system_configs_category').on(systemConfigs.category);
+// Temporarily commented out to debug JSON parsing issue
+// export const lineOaConfigsIndex = index('idx_line_oa_configs_chatbot').on(lineOaConfigs.chatbotId);
+// export const widgetConfigsIndex = index('idx_widget_configs_chatbot').on(chatbotWidgetConfigs.chatbotId);
+// export const translationsIndex = index('idx_translations_chatbot_lang').on(chatbotTranslations.chatbotId, chatbotTranslations.languageCode);
+// export const translationsKeyIndex = index('idx_translations_key_lang').on(chatbotTranslations.translationKey, chatbotTranslations.languageCode);
+// export const auditLogUserIndex = index('idx_audit_log_user_created').on(securityAuditLog.userId, securityAuditLog.createdAt);
+// export const auditLogChatbotIndex = index('idx_audit_log_chatbot_created').on(securityAuditLog.chatbotId, securityAuditLog.createdAt);
+// export const systemConfigsCategoryIndex = index('idx_system_configs_category').on(systemConfigs.category);
 
 // TypeScript types for integration support
 export type LineOaConfig = typeof lineOaConfigs.$inferSelect;
