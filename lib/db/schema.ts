@@ -935,3 +935,116 @@ export const reportCategoryEnum = pgEnum('report_category', [
   'copyright',
   'other'
 ]);
+
+// =============================================================================
+// PHASE 6.3: PUBLIC API FRAMEWORK TABLES
+// =============================================================================
+
+// API Usage Tracking table (for analytics and billing)
+export const apiUsage = pgTable('api_usage', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  apiKeyId: varchar('api_key_id', { length: 255 }).notNull().references(() => apiKeys.id, { onDelete: 'cascade' }),
+  endpoint: varchar('endpoint', { length: 255 }).notNull(),
+  method: varchar('method', { length: 10 }).notNull(),
+  chatbotId: uuid('chatbot_id').references(() => chatbotInstances.id, { onDelete: 'set null' }),
+  userId: varchar('user_id', { length: 255 }),
+  messageLength: integer('message_length'),
+  tokensUsed: integer('tokens_used'),
+  responseTime: integer('response_time'), // in milliseconds
+  statusCode: integer('status_code'),
+  metadata: jsonb('metadata').default({}),
+  timestamp: timestamp('timestamp', { withTimezone: true }).defaultNow().notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  apiUsageKeyIndex: index('idx_api_usage_key').on(table.apiKeyId, table.timestamp),
+  apiUsageEndpointIndex: index('idx_api_usage_endpoint').on(table.endpoint, table.timestamp),
+  apiUsageChatbotIndex: index('idx_api_usage_chatbot').on(table.chatbotId, table.timestamp),
+  apiUsageUserIndex: index('idx_api_usage_user').on(table.userId, table.timestamp),
+}));
+
+// API Usage Limits table (for controlling rate limits per API key)
+export const apiUsageLimits = pgTable('api_usage_limits', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  apiKeyId: varchar('api_key_id', { length: 255 }).notNull().unique().references(() => apiKeys.id, { onDelete: 'cascade' }),
+  requestsPerHour: integer('requests_per_hour').default(1000),
+  requestsPerDay: integer('requests_per_day').default(10000),
+  requestsPerMonth: integer('requests_per_month').default(100000),
+  tokensPerHour: integer('tokens_per_hour').default(100000),
+  tokensPerDay: integer('tokens_per_day').default(1000000),
+  tokensPerMonth: integer('tokens_per_month').default(10000000),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// API Usage Quotas table (for billing and plan management)
+export const apiUsageQuotas = pgTable('api_usage_quotas', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  apiKeyId: varchar('api_key_id', { length: 255 }).notNull().references(() => apiKeys.id, { onDelete: 'cascade' }),
+  period: varchar('period', { length: 20 }).notNull(), // 'daily', 'monthly', 'yearly'
+  totalRequests: integer('total_requests').default(0),
+  totalTokens: integer('total_tokens').default(0),
+  totalCost: integer('total_cost').default(0), // in cents
+  resetDate: timestamp('reset_date', { withTimezone: true }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  quotaKeyPeriodIndex: index('idx_quotas_key_period').on(table.apiKeyId, table.period),
+  quotaResetIndex: index('idx_quotas_reset').on(table.resetDate),
+}));
+
+// API Documentation Versions table (for versioned API docs)
+export const apiDocumentationVersions = pgTable('api_documentation_versions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  version: varchar('version', { length: 50 }).notNull().unique(),
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description'),
+  openApiSpec: jsonb('openapi_spec').notNull(), // Store complete OpenAPI specification
+  isActive: boolean('is_active').default(true),
+  isDefault: boolean('is_default').default(false),
+  releaseNotes: text('release_notes'),
+  createdBy: uuid('created_by').notNull().references(() => users.id),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  docVersionIndex: index('idx_docs_version').on(table.version),
+  docActiveIndex: index('idx_docs_active').on(table.isActive, table.isDefault),
+}));
+
+// Developer Portal Users table (for developer onboarding)
+export const developerPortalUsers = pgTable('developer_portal_users', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  email: varchar('email', { length: 255 }).notNull().unique(),
+  name: varchar('name', { length: 255 }).notNull(),
+  company: varchar('company', { length: 255 }),
+  jobTitle: varchar('job_title', { length: 255 }),
+  useCase: text('use_case'),
+  expectedUsage: varchar('expected_usage', { length: 100 }), // 'low', 'medium', 'high', 'enterprise'
+  isApproved: boolean('is_approved').default(false),
+  isActive: boolean('is_active').default(true),
+  approvedBy: uuid('approved_by').references(() => users.id),
+  approvedAt: timestamp('approved_at', { withTimezone: true }),
+  lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
+  metadata: jsonb('metadata').default({}),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  developerEmailIndex: index('idx_developers_email').on(table.email),
+  developerApprovalIndex: index('idx_developers_approval').on(table.isApproved, table.isActive),
+  developerUsageIndex: index('idx_developers_usage').on(table.expectedUsage),
+}));
+
+// TypeScript types for Public API framework
+export type ApiUsage = typeof apiUsage.$inferSelect;
+export type NewApiUsage = typeof apiUsage.$inferInsert;
+
+export type ApiUsageLimit = typeof apiUsageLimits.$inferSelect;
+export type NewApiUsageLimit = typeof apiUsageLimits.$inferInsert;
+
+export type ApiUsageQuota = typeof apiUsageQuotas.$inferSelect;
+export type NewApiUsageQuota = typeof apiUsageQuotas.$inferInsert;
+
+export type ApiDocumentationVersion = typeof apiDocumentationVersions.$inferSelect;
+export type NewApiDocumentationVersion = typeof apiDocumentationVersions.$inferInsert;
+
+export type DeveloperPortalUser = typeof developerPortalUsers.$inferSelect;
+export type NewDeveloperPortalUser = typeof developerPortalUsers.$inferInsert;

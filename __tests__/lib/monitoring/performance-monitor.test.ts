@@ -657,7 +657,7 @@ describe('Performance Monitor', () => {
           },
           errors: {
             total: 1256,
-            distribution: { 4xx: 1089, 5xx: 167 },
+            distribution: { '4xx': 1089, '5xx': 167 },
             trends: 'decreasing'
           }
         },
