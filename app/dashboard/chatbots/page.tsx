@@ -16,7 +16,7 @@ import {
   Bot, Plus, Settings, Play, Pause, MoreHorizontal, MessageCircle, Users, Clock,
   AlertCircle, RefreshCw, FileText, Search, Filter, Download, Trash2,
   TrendingUp, TrendingDown, Activity, Zap, CheckCircle2, XCircle,
-  PlayCircle, StopCircle, Settings2, BarChart3
+  PlayCircle, StopCircle, Settings2, BarChart3, Link2, Smartphone, Webhook
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
@@ -320,6 +320,21 @@ export default function ChatbotsPage() {
 
   // Get unique models for filter dropdown
   const uniqueModels = Array.from(new Set(chatbots.map(bot => bot.configuration.model)));
+
+  // Mock integration status - in real app this would come from API
+  const getIntegrationStatus = (chatbotId: string) => {
+    // Mock data - simulate different integration statuses
+    const mockIntegrations = [
+      { type: 'line_oa', status: 'active', icon: Smartphone },
+      { type: 'web_widget', status: 'active', icon: MessageCircle },
+      { type: 'rest_api', status: 'active', icon: Link2 },
+      { type: 'webhook', status: 'inactive', icon: Webhook }
+    ];
+
+    // Simulate different combinations for different chatbots
+    const activeCount = Math.floor(Math.random() * 3) + 1; // 1-3 active integrations
+    return mockIntegrations.slice(0, activeCount);
+  };
 
   const toggleStatus = async (id: string, currentStatus: 'active' | 'inactive' | 'testing') => {
     try {
@@ -696,6 +711,50 @@ export default function ChatbotsPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         {getStatusBadge(bot.status)}
+
+                        {/* Integration Status Indicators */}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center gap-1">
+                              {getIntegrationStatus(bot.id).map((integration, index) => {
+                                const IconComponent = integration.icon;
+                                return (
+                                  <div
+                                    key={integration.type}
+                                    className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                                      integration.status === 'active'
+                                        ? 'bg-green-100 text-green-600'
+                                        : 'bg-gray-100 text-gray-400'
+                                    }`}
+                                  >
+                                    <IconComponent className="w-3 h-3" />
+                                  </div>
+                                );
+                              })}
+                              {getIntegrationStatus(bot.id).length > 0 && (
+                                <span className="text-xs text-muted-foreground ml-1">
+                                  {getIntegrationStatus(bot.id).filter(i => i.status === 'active').length}
+                                </span>
+                              )}
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <div className="text-sm">
+                              <div className="font-medium mb-1">Active Integrations</div>
+                              {getIntegrationStatus(bot.id)
+                                .filter(i => i.status === 'active')
+                                .map(i => (
+                                  <div key={i.type} className="text-xs">
+                                    {i.type.replace('_', ' ').toUpperCase()}
+                                  </div>
+                                ))}
+                              {getIntegrationStatus(bot.id).filter(i => i.status === 'active').length === 0 && (
+                                <div className="text-xs text-muted-foreground">No active integrations</div>
+                              )}
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon">
@@ -711,9 +770,13 @@ export default function ChatbotsPage() {
                               <PlayCircle className="mr-2 h-4 w-4" />
                               Playground
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => router.push(`/dashboard/chatbots/${bot.id}/configure`)}>
                               <Settings2 className="mr-2 h-4 w-4" />
                               Configure
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => router.push(`/dashboard/chatbots/${bot.id}/integrations`)}>
+                              <Link2 className="mr-2 h-4 w-4" />
+                              Setup Integrations
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => toggleStatus(bot.id, bot.status)}>

@@ -3,13 +3,14 @@ import { ConversationService } from '@/lib/services/conversation-service';
 import { AuthTokenService } from '@/lib/auth';
 import { validateMessageSend } from '@/lib/validation/conversation';
 import { createSuccessResponse, createErrorResponse } from '@/lib/utils/api-response';
+import { withContentFilter } from '@/lib/middleware/content-filter';
 
 /**
  * POST /api/v1/conversations/{id}/messages
  *
  * Send a message and get AI response
  */
-export async function POST(
+async function postHandler(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
@@ -110,3 +111,13 @@ export async function PATCH() {
     { status: 405 }
   );
 }
+
+// Apply content filtering to POST endpoint
+export const POST = withContentFilter({
+  enabled: true,
+  blockOnViolation: true,
+  severityThreshold: 'medium',
+  logViolations: true,
+  rateLimitViolators: true,
+  exemptRoles: ['admin', 'super_admin']
+})(postHandler);

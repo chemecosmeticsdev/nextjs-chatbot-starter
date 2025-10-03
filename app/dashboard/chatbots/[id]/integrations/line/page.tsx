@@ -15,6 +15,15 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
+  Breadcrumb,
+  BreadcrumbEllipsis,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import {
   ArrowLeft,
   Copy,
   ExternalLink,
@@ -251,27 +260,45 @@ export default function LineOASetupPage() {
 
   return (
     <div className="container max-w-4xl mx-auto py-6 space-y-6">
+      {/* Breadcrumb Navigation */}
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/dashboard/chatbots">Chatbots</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink href={`/dashboard/chatbots/${chatbotId}`}>
+              Chatbot
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink href={`/dashboard/chatbots/${chatbotId}/integrations`}>
+              Integrations
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>LINE Official Account</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push(`/dashboard/chatbots/${chatbotId}/integrations`)}
-            className="gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Integrations
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <MessageSquare className="h-6 w-6 text-green-600" />
-              Line Official Account Setup
-            </h1>
-            <p className="text-muted-foreground">
-              Connect your chatbot to Line messaging platform
-            </p>
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <MessageSquare className="h-6 w-6 text-green-600" />
+            LINE Official Account Setup
+          </h1>
+          <p className="text-muted-foreground">
+            Connect your chatbot to LINE messaging platform
+          </p>
         </div>
         <div className="flex items-center gap-2">
           {config.status === "active" && (
@@ -280,6 +307,15 @@ export default function LineOASetupPage() {
               Active
             </Badge>
           )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push(`/dashboard/chatbots/${chatbotId}/integrations`)}
+            className="gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Integrations
+          </Button>
         </div>
       </div>
 

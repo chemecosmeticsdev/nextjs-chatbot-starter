@@ -16,7 +16,7 @@ import {
   Bot, Settings, MessageCircle, Users, Clock, Activity, Zap, BarChart3,
   ArrowLeft, Play, Pause, RefreshCw, AlertCircle, TrendingUp, TrendingDown,
   CheckCircle2, XCircle, Edit, FileText, Database, Globe, Calendar,
-  Eye, Download, Share2, Copy, ExternalLink
+  Eye, Download, Share2, Copy, ExternalLink, Smartphone, Webhook, Link2, Plus
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -48,6 +48,22 @@ interface ChatbotStats {
   topQuestions: Array<{ question: string; count: number }>;
   dailyUsage: Array<{ date: string; messages: number; users: number }>;
   performanceTrend: 'up' | 'down' | 'stable';
+}
+
+interface Integration {
+  id: string;
+  type: 'line_oa' | 'web_widget' | 'rest_api' | 'webhook';
+  name: string;
+  status: 'active' | 'inactive' | 'error' | 'pending';
+  description: string;
+  lastActivity: string | null;
+  usageStats: {
+    messages: number;
+    users: number;
+    sessions: number;
+  };
+  config: Record<string, any>;
+  createdAt: string;
 }
 
 export default function ChatbotDetailPage() {
@@ -420,6 +436,7 @@ export default function ChatbotDetailPage() {
             <TabsTrigger value="performance">Performance</TabsTrigger>
             <TabsTrigger value="configuration">Configuration</TabsTrigger>
             <TabsTrigger value="activity">Recent Activity</TabsTrigger>
+            <TabsTrigger value="integrations">Integrations</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
@@ -588,6 +605,182 @@ export default function ChatbotDetailPage() {
                 </p>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="integrations" className="space-y-4">
+            <div className="grid gap-4">
+              {/* Integration Overview */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Link2 className="h-5 w-5" />
+                    Integration Overview
+                  </CardTitle>
+                  <CardDescription>
+                    Connect your chatbot to various platforms and services
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="text-center p-4 border rounded-lg">
+                      <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-2">
+                        <Smartphone className="h-6 w-6 text-blue-600" />
+                      </div>
+                      <h3 className="font-medium">Mobile Apps</h3>
+                      <p className="text-sm text-muted-foreground">2 active</p>
+                    </div>
+                    <div className="text-center p-4 border rounded-lg">
+                      <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-2">
+                        <Webhook className="h-6 w-6 text-green-600" />
+                      </div>
+                      <h3 className="font-medium">Webhooks</h3>
+                      <p className="text-sm text-muted-foreground">1 active</p>
+                    </div>
+                    <div className="text-center p-4 border rounded-lg">
+                      <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-2">
+                        <Link2 className="h-6 w-6 text-purple-600" />
+                      </div>
+                      <h3 className="font-medium">APIs</h3>
+                      <p className="text-sm text-muted-foreground">3 active</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Active Integrations */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Active Integrations</CardTitle>
+                      <CardDescription>
+                        Currently connected platforms and services
+                      </CardDescription>
+                    </div>
+                    <Button
+                      onClick={() => router.push(`/dashboard/chatbots/${chatbotId}/integrations`)}
+                      size="sm"
+                    >
+                      <Settings className="mr-2 h-4 w-4" />
+                      Manage All
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {/* LINE OA Integration */}
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                          <Smartphone className="h-5 w-5 text-green-600" />
+                        </div>
+                        <div>
+                          <h4 className="font-medium">LINE Official Account</h4>
+                          <p className="text-sm text-muted-foreground">Connected via webhook</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-green-100 text-green-800">
+                          <div className="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
+                          Active
+                        </Badge>
+                        <Button variant="outline" size="sm">
+                          Configure
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Web Widget Integration */}
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                          <MessageCircle className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <h4 className="font-medium">Website Widget</h4>
+                          <p className="text-sm text-muted-foreground">Embedded chat widget</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-green-100 text-green-800">
+                          <div className="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
+                          Active
+                        </Badge>
+                        <Button variant="outline" size="sm">
+                          Configure
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* REST API Integration */}
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                          <Link2 className="h-5 w-5 text-purple-600" />
+                        </div>
+                        <div>
+                          <h4 className="font-medium">REST API</h4>
+                          <p className="text-sm text-muted-foreground">Direct API access</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-green-100 text-green-800">
+                          <div className="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
+                          Active
+                        </Badge>
+                        <Button variant="outline" size="sm">
+                          Configure
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Quick Actions */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Quick Actions</CardTitle>
+                  <CardDescription>
+                    Set up new integrations or manage existing ones
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Button
+                    className="w-full justify-start"
+                    variant="outline"
+                    onClick={() => router.push(`/dashboard/chatbots/${chatbotId}/integrations/new`)}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add New Integration
+                  </Button>
+                  <Button
+                    className="w-full justify-start"
+                    variant="outline"
+                    onClick={() => router.push(`/dashboard/chatbots/${chatbotId}/integrations/line-oa`)}
+                  >
+                    <Smartphone className="mr-2 h-4 w-4" />
+                    LINE Official Account
+                  </Button>
+                  <Button
+                    className="w-full justify-start"
+                    variant="outline"
+                    onClick={() => router.push(`/dashboard/chatbots/${chatbotId}/integrations/web-widget`)}
+                  >
+                    <MessageCircle className="mr-2 h-4 w-4" />
+                    Website Widget
+                  </Button>
+                  <Button
+                    className="w-full justify-start"
+                    variant="outline"
+                    onClick={() => router.push(`/dashboard/chatbots/${chatbotId}/integrations/rest-api`)}
+                  >
+                    <Link2 className="mr-2 h-4 w-4" />
+                    REST API Setup
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </div>

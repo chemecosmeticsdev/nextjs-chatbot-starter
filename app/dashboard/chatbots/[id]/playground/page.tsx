@@ -42,9 +42,16 @@ import {
   Loader2,
   Eye,
   EyeOff,
-  Database
+  Database,
+  Wifi,
+  WifiOff
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { LiveChatInterface } from "@/components/chat/live-chat-interface";
+import { ConnectionStatus } from "@/components/websocket/connection-status";
+import { WebSocketProvider } from "@/components/websocket/websocket-provider";
+import { useRealtimeChat } from "@/hooks/use-realtime-chat";
+import { useAuth } from "@/hooks/use-auth";
 
 interface ChatMessage {
   id: string;
@@ -103,10 +110,11 @@ interface ConfigOverride {
   debugMode?: boolean;
 }
 
-export default function ChatbotPlaygroundPage() {
+function ChatbotPlaygroundPageContent() {
   const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
+  const { user } = useAuth();
   const chatbotId = params.id as string;
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -586,9 +594,10 @@ export default function ChatbotPlaygroundPage() {
             </Card>
           </div>
 
-          {/* Chat Interface */}
-          <Card className="flex flex-col h-[600px]">
-            <CardHeader className="pb-4">
+          {/* Real-time Chat Interface */}
+          <div className="space-y-4">
+            {/* Chat Status Header */}
+            <Card className="p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="gap-1">
@@ -598,6 +607,7 @@ export default function ChatbotPlaygroundPage() {
                   <Badge variant={chatbot.status === "active" ? "default" : "secondary"}>
                     {chatbot.status === "active" ? "Online" : "Offline"}
                   </Badge>
+                  <ConnectionStatus compact />
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
@@ -620,175 +630,30 @@ export default function ChatbotPlaygroundPage() {
                   </Button>
                 </div>
               </div>
-            </CardHeader>
+            </Card>
 
-            <CardContent className="flex-1 flex flex-col gap-4 p-0">
-              {/* Messages Area */}
-              <ScrollArea className="flex-1 px-6">
-                <div className="space-y-4 pb-4">
-                  {messages.length === 0 ? (
-                    <div className="text-center py-8 space-y-4">
-                      <Bot className="h-12 w-12 text-muted-foreground mx-auto" />
-                      <div>
-                        <h3 className="text-lg font-semibold">Start a Conversation</h3>
-                        <p className="text-muted-foreground">
-                          Send a message to begin testing your chatbot
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    messages.map((message) => (
-                      <div
-                        key={message.id}
-                        className={`flex gap-3 ${
-                          message.role === "user" ? "justify-end" : "justify-start"
-                        }`}
-                      >
-                        <div
-                          className={`flex gap-3 max-w-[80%] ${
-                            message.role === "user" ? "flex-row-reverse" : "flex-row"
-                          }`}
-                        >
-                          <div className="flex-shrink-0">
-                            {message.role === "user" ? (
-                              <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-                                <User className="h-4 w-4 text-primary-foreground" />
-                              </div>
-                            ) : (
-                              <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center">
-                                <Bot className="h-4 w-4 text-secondary-foreground" />
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="space-y-2">
-                            <div
-                              className={`rounded-lg p-3 ${
-                                message.role === "user"
-                                  ? "bg-primary text-primary-foreground"
-                                  : "bg-muted"
-                              }`}
-                            >
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="flex-1">
-                                  {message.status === "sending" ? (
-                                    <div className="flex items-center gap-2">
-                                      <Loader2 className="h-4 w-4 animate-spin" />
-                                      <span className="text-sm">Thinking...</span>
-                                    </div>
-                                  ) : (
-                                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                                  )}
-                                </div>
-
-                                {message.role === "assistant" && message.status === "sent" && (
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                                        <MoreVertical className="h-3 w-3" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent>
-                                      <DropdownMenuItem onClick={() => copyMessage(message.content)}>
-                                        <Copy className="h-4 w-4 mr-2" />
-                                        Copy
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Message Metadata */}
-                            {message.role === "assistant" && message.metadata && message.status === "sent" && (
-                              <div className="space-y-2">
-                                <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                                  <span>⏱️ {message.metadata.responseTime}ms</span>
-                                  {message.metadata.tokenUsage && (
-                                    <span>🔤 {message.metadata.tokenUsage.total} tokens</span>
-                                  )}
-                                  {message.metadata.vectorSearchResults && message.metadata.vectorSearchResults.length > 0 && (
-                                    <span>🔍 {message.metadata.vectorSearchResults.length} sources</span>
-                                  )}
-                                </div>
-
-                                {/* Vector Search Results */}
-                                {showVectorResults && message.metadata.vectorSearchResults && message.metadata.vectorSearchResults.length > 0 && (
-                                  <div className="space-y-2 mt-2">
-                                    <div className="text-xs font-medium text-muted-foreground">
-                                      📚 Knowledge Sources:
-                                    </div>
-                                    {message.metadata.vectorSearchResults.slice(0, 3).map((result, index) => (
-                                      <div key={index} className="bg-muted/50 rounded p-2 text-xs space-y-1">
-                                        <div className="flex items-center justify-between">
-                                          <span className="font-medium">{result.metadata.title || "Untitled"}</span>
-                                          <Badge variant="outline" className="text-xs">
-                                            {(result.similarity_score * 100).toFixed(1)}%
-                                          </Badge>
-                                        </div>
-                                        <p className="text-muted-foreground line-clamp-2">
-                                          {result.content.substring(0, 100)}...
-                                        </p>
-                                        {result.metadata.source && (
-                                          <p className="text-muted-foreground">
-                                            Source: {result.metadata.source}
-                                          </p>
-                                        )}
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-
-                            <div className="text-xs text-muted-foreground">
-                              {new Date(message.timestamp).toLocaleTimeString()}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                  <div ref={messagesEndRef} />
-                </div>
-              </ScrollArea>
-
-              {/* Input Area */}
-              <div className="border-t p-4 space-y-3">
-                <div className="flex gap-2">
-                  <Input
-                    value={inputMessage}
-                    onChange={(e) => setInputMessage(e.target.value)}
-                    placeholder="Type your message..."
-                    disabled={isSending}
-                    onKeyPress={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        sendMessage();
-                      }
-                    }}
-                    className="flex-1"
-                  />
-                  <Button
-                    onClick={sendMessage}
-                    disabled={!inputMessage.trim() || isSending}
-                    className="gap-2"
-                  >
-                    {isSending ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Send className="h-4 w-4" />
-                    )}
-                    Send
-                  </Button>
-                </div>
-
-                <div className="text-xs text-muted-foreground">
-                  Press Enter to send, Shift+Enter for new line
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+            {/* Live Chat Interface */}
+            <LiveChatInterface
+              chatbotId={chatbotId}
+              conversationId={currentSessionId || 'playground-session'}
+              enableTypingIndicators={true}
+              enableMessageStatus={true}
+              enableNotifications={true}
+              showConnectionStatus={false}
+              showMessageStatus={true}
+              showTypingIndicators={true}
+              placeholder="Type your message to test the chatbot..."
+              maxHeight="600px"
+              className="min-h-[600px]"
+              onMessageSent={(content) => {
+                // Update metrics when message is sent
+                setMetrics(prev => ({
+                  ...prev,
+                  totalMessages: prev.totalMessages + 1
+                }));
+              }}
+            />
+          </div>
         </div>
 
         {/* Sidebar */}
@@ -983,5 +848,14 @@ export default function ChatbotPlaygroundPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Main exported component with WebSocket provider
+export default function ChatbotPlaygroundPage() {
+  return (
+    <WebSocketProvider autoConnect={true} enableNotifications={true}>
+      <ChatbotPlaygroundPageContent />
+    </WebSocketProvider>
   );
 }

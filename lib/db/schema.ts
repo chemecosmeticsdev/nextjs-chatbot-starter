@@ -383,6 +383,86 @@ export type NewMessageFeedback = typeof messageFeedback.$inferInsert;
 export type ApiRateLimit = typeof apiRateLimits.$inferSelect;
 export type NewApiRateLimit = typeof apiRateLimits.$inferInsert;
 
+// WebSocket Sessions table (for tracking active WebSocket connections)
+export const websocketSessions = pgTable('websocket_sessions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  connectionId: varchar('connection_id', { length: 255 }).notNull().unique(),
+  ipAddress: varchar('ip_address', { length: 45 }),
+  userAgent: text('user_agent'),
+  metadata: jsonb('metadata').default({}), // Store additional connection info
+  connectedAt: timestamp('connected_at', { withTimezone: true }).defaultNow(),
+  lastPingAt: timestamp('last_ping_at', { withTimezone: true }).defaultNow(),
+  lastPongAt: timestamp('last_pong_at', { withTimezone: true }).defaultNow(),
+  disconnectedAt: timestamp('disconnected_at', { withTimezone: true }),
+  isActive: boolean('is_active').default(true),
+}, (table) => ({
+  userConnectionIndex: index('websocket_sessions_user_id_idx').on(table.userId),
+  activeConnectionIndex: index('websocket_sessions_active_idx').on(table.isActive),
+}));
+
+// Real-time Message Queue table (for offline message delivery)
+export const realtimeMessageQueue = pgTable('realtime_message_queue', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  messageType: varchar('message_type', { length: 100 }).notNull(),
+  payload: jsonb('payload').notNull(),
+  priority: integer('priority').default(5), // 1-10, higher = more important
+  retryCount: integer('retry_count').default(0),
+  maxRetries: integer('max_retries').default(3),
+  scheduledFor: timestamp('scheduled_for', { withTimezone: true }).defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  deliveredAt: timestamp('delivered_at', { withTimezone: true }),
+  failedAt: timestamp('failed_at', { withTimezone: true }),
+  errorMessage: text('error_message'),
+}, (table) => ({
+  userQueueIndex: index('realtime_queue_user_id_idx').on(table.userId),
+  scheduleIndex: index('realtime_queue_scheduled_idx').on(table.scheduledFor),
+  deliveryIndex: index('realtime_queue_delivery_idx').on(table.deliveredAt),
+}));
+
+// WebSocket Room Memberships table (for tracking room participants)
+export const websocketRoomMemberships = pgTable('websocket_room_memberships', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  sessionId: uuid('session_id').notNull().references(() => websocketSessions.id, { onDelete: 'cascade' }),
+  roomId: varchar('room_id', { length: 255 }).notNull(),
+  roomType: varchar('room_type', { length: 50 }).notNull(), // 'chatbot', 'admin', 'user', 'analytics'
+  joinedAt: timestamp('joined_at', { withTimezone: true }).defaultNow(),
+  leftAt: timestamp('left_at', { withTimezone: true }),
+  isActive: boolean('is_active').default(true),
+}, (table) => ({
+  sessionRoomIndex: unique().on(table.sessionId, table.roomId),
+  roomActiveIndex: index('websocket_rooms_active_idx').on(table.roomId, table.isActive),
+}));
+
+// WebSocket Connection Analytics table (for monitoring connection health)
+export const websocketConnectionAnalytics = pgTable('websocket_connection_analytics', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  sessionId: uuid('session_id').notNull().references(() => websocketSessions.id, { onDelete: 'cascade' }),
+  timestamp: timestamp('timestamp', { withTimezone: true }).defaultNow(),
+  eventType: varchar('event_type', { length: 50 }).notNull(), // 'ping', 'pong', 'message_sent', 'message_received', 'error'
+  latencyMs: integer('latency_ms'),
+  messageSize: integer('message_size'), // For sent/received messages
+  errorCode: varchar('error_code', { length: 50 }),
+  metadata: jsonb('metadata').default({}),
+}, (table) => ({
+  sessionAnalyticsIndex: index('websocket_analytics_session_idx').on(table.sessionId, table.timestamp),
+  eventTypeIndex: index('websocket_analytics_event_idx').on(table.eventType, table.timestamp),
+}));
+
+// WebSocket types
+export type WebSocketSession = typeof websocketSessions.$inferSelect;
+export type NewWebSocketSession = typeof websocketSessions.$inferInsert;
+
+export type RealtimeMessageQueue = typeof realtimeMessageQueue.$inferSelect;
+export type NewRealtimeMessageQueue = typeof realtimeMessageQueue.$inferInsert;
+
+export type WebSocketRoomMembership = typeof websocketRoomMemberships.$inferSelect;
+export type NewWebSocketRoomMembership = typeof websocketRoomMemberships.$inferInsert;
+
+export type WebSocketConnectionAnalytics = typeof websocketConnectionAnalytics.$inferSelect;
+export type NewWebSocketConnectionAnalytics = typeof websocketConnectionAnalytics.$inferInsert;
+
 // Chatbot-specific types
 export type ChatbotStatus = 'active' | 'inactive' | 'testing';
 export type MessageRole = 'user' | 'assistant' | 'system';
@@ -612,3 +692,246 @@ export interface LineOaSettings {
   maxResponseLength?: number;
   [key: string]: any;
 }
+
+// =============================================================================
+// PHASE 5.1: API SECURITY TABLES
+// =============================================================================
+
+// API Keys table (for external API access)
+export const apiKeys = pgTable('api_keys', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  keyHash: varchar('key_hash', { length: 255 }).notNull().unique(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  scopes: jsonb('scopes').default([]).notNull(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }),
+  lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  apiKeyUserIndex: index('idx_api_keys_user').on(table.userId),
+  apiKeyHashIndex: index('idx_api_keys_hash').on(table.keyHash),
+  apiKeyExpiryIndex: index('idx_api_keys_expiry').on(table.expiresAt),
+}));
+
+// Enhanced activity logs for security events
+export const securityEvents = pgTable('security_events', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+  eventType: varchar('event_type', { length: 100 }).notNull(), // 'auth_failure', 'rate_limit_exceeded', 'api_key_used'
+  severity: varchar('severity', { length: 20 }).notNull().default('info'), // 'info', 'warning', 'critical'
+  ipAddress: varchar('ip_address', { length: 45 }),
+  userAgent: text('user_agent'),
+  endpoint: varchar('endpoint', { length: 255 }),
+  method: varchar('method', { length: 10 }),
+  statusCode: integer('status_code'),
+  details: jsonb('details').default({}),
+  blocked: boolean('blocked').default(false), // Whether the request was blocked
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  securityEventTypeIndex: index('idx_security_events_type').on(table.eventType, table.createdAt),
+  securityEventUserIndex: index('idx_security_events_user').on(table.userId, table.createdAt),
+  securityEventIpIndex: index('idx_security_events_ip').on(table.ipAddress, table.createdAt),
+  securityEventSeverityIndex: index('idx_security_events_severity').on(table.severity, table.createdAt),
+}));
+
+// CORS Domain Whitelist
+export const corsWhitelist = pgTable('cors_whitelist', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  domain: varchar('domain', { length: 255 }).notNull().unique(),
+  description: text('description'),
+  isActive: boolean('is_active').default(true),
+  addedBy: uuid('added_by').notNull().references(() => users.id),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// TypeScript types for API security
+export type ApiKey = typeof apiKeys.$inferSelect;
+export type NewApiKey = typeof apiKeys.$inferInsert;
+
+export type SecurityEvent = typeof securityEvents.$inferSelect;
+export type NewSecurityEvent = typeof securityEvents.$inferInsert;
+
+export type CorsWhitelist = typeof corsWhitelist.$inferSelect;
+export type NewCorsWhitelist = typeof corsWhitelist.$inferInsert;
+
+// =============================================================================
+// PHASE 5.2: CONTENT MODERATION TABLES
+// =============================================================================
+
+// Content Moderation Rules Enum
+export const moderationSeverityEnum = pgEnum('moderation_severity', ['low', 'medium', 'high', 'critical']);
+export const moderationRuleTypeEnum = pgEnum('moderation_rule_type', ['profanity', 'spam', 'toxicity', 'custom_pattern', 'ai_detection']);
+export const violationStatusEnum = pgEnum('violation_status', ['pending', 'approved', 'rejected', 'escalated', 'resolved']);
+export const reviewStatusEnum = pgEnum('review_status', ['pending', 'in_review', 'approved', 'rejected', 'escalated']);
+export const appealStatusEnum = pgEnum('appeal_status', ['pending', 'approved', 'rejected', 'under_review']);
+
+// Content Moderation Rules table
+export const contentModerationRules = pgTable('content_moderation_rules', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  ruleType: moderationRuleTypeEnum('rule_type').notNull(),
+  configuration: jsonb('configuration').notNull(), // Store rule-specific config (keywords, patterns, thresholds)
+  severityLevel: moderationSeverityEnum('severity_level').notNull(),
+  isActive: boolean('is_active').default(true),
+  autoAction: varchar('auto_action', { length: 50 }).default('flag'), // 'block', 'flag', 'escalate'
+  createdBy: uuid('created_by').notNull().references(() => users.id),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  ruleTypeIndex: index('idx_moderation_rules_type').on(table.ruleType),
+  severityIndex: index('idx_moderation_rules_severity').on(table.severityLevel),
+  activeRulesIndex: index('idx_moderation_rules_active').on(table.isActive),
+}));
+
+// Content Moderation Violations table
+export const contentModerationViolations = pgTable('content_moderation_violations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  messageId: uuid('message_id').notNull().references(() => chatbotMessages.id, { onDelete: 'cascade' }),
+  ruleId: uuid('rule_id').notNull().references(() => contentModerationRules.id),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+  chatbotId: uuid('chatbot_id').notNull().references(() => chatbotInstances.id, { onDelete: 'cascade' }),
+  violationType: moderationRuleTypeEnum('violation_type').notNull(),
+  severity: moderationSeverityEnum('severity').notNull(),
+  status: violationStatusEnum('status').default('pending'),
+  confidenceScore: integer('confidence_score'), // 0-100 confidence level for AI detections
+  originalContent: text('original_content').notNull(), // Store original content for review
+  flaggedContent: text('flagged_content'), // Specific flagged portion
+  userIdentifier: varchar('user_identifier', { length: 255 }), // IP or session ID for anonymous users
+  adminNotes: text('admin_notes'),
+  resolvedBy: uuid('resolved_by').references(() => users.id),
+  resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  violationMessageIndex: index('idx_violations_message').on(table.messageId),
+  violationUserIndex: index('idx_violations_user').on(table.userId, table.createdAt),
+  violationChatbotIndex: index('idx_violations_chatbot').on(table.chatbotId, table.createdAt),
+  violationStatusIndex: index('idx_violations_status').on(table.status, table.createdAt),
+  violationSeverityIndex: index('idx_violations_severity').on(table.severity, table.createdAt),
+}));
+
+// Content Moderation Reviews table (Admin review workflow)
+export const contentModerationReviews = pgTable('content_moderation_reviews', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  violationId: uuid('violation_id').notNull().references(() => contentModerationViolations.id, { onDelete: 'cascade' }),
+  assignedTo: uuid('assigned_to').references(() => users.id),
+  reviewStatus: reviewStatusEnum('review_status').default('pending'),
+  adminAction: varchar('admin_action', { length: 50 }), // 'approve', 'reject', 'escalate', 'require_appeal'
+  adminNotes: text('admin_notes'),
+  reviewedBy: uuid('reviewed_by').references(() => users.id),
+  reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+  escalationReason: text('escalation_reason'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  reviewViolationIndex: index('idx_reviews_violation').on(table.violationId),
+  reviewAssignedIndex: index('idx_reviews_assigned').on(table.assignedTo, table.reviewStatus),
+  reviewStatusIndex: index('idx_reviews_status').on(table.reviewStatus, table.createdAt),
+  reviewedByIndex: index('idx_reviews_reviewed_by').on(table.reviewedBy, table.reviewedAt),
+}));
+
+// Content Moderation Appeals table (User appeal system)
+export const contentModerationAppeals = pgTable('content_moderation_appeals', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  violationId: uuid('violation_id').notNull().references(() => contentModerationViolations.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+  userIdentifier: varchar('user_identifier', { length: 255 }), // For anonymous users
+  appealReason: text('appeal_reason').notNull(),
+  additionalContext: text('additional_context'),
+  status: appealStatusEnum('status').default('pending'),
+  reviewedBy: uuid('reviewed_by').references(() => users.id),
+  adminResponse: text('admin_response'),
+  reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  appealViolationIndex: index('idx_appeals_violation').on(table.violationId),
+  appealUserIndex: index('idx_appeals_user').on(table.userId, table.createdAt),
+  appealStatusIndex: index('idx_appeals_status').on(table.status, table.createdAt),
+  appealReviewedByIndex: index('idx_appeals_reviewed_by').on(table.reviewedBy, table.reviewedAt),
+}));
+
+// Content Moderation Analytics table (For tracking moderation effectiveness)
+export const contentModerationAnalytics = pgTable('content_moderation_analytics', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  date: varchar('date', { length: 10 }).notNull(), // Store as 'YYYY-MM-DD' format
+  chatbotId: uuid('chatbot_id').references(() => chatbotInstances.id, { onDelete: 'cascade' }),
+  totalMessages: integer('total_messages').default(0),
+  flaggedMessages: integer('flagged_messages').default(0),
+  blockedMessages: integer('blocked_messages').default(0),
+  falsePositives: integer('false_positives').default(0),
+  approvedViolations: integer('approved_violations').default(0),
+  appealSubmitted: integer('appeals_submitted').default(0),
+  appealsApproved: integer('appeals_approved').default(0),
+  ruleBreakdown: jsonb('rule_breakdown').default({}), // {"profanity": 5, "spam": 2}
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  analyticsDateIndex: index('idx_moderation_analytics_date').on(table.date),
+  analyticsChatbotIndex: index('idx_moderation_analytics_chatbot').on(table.chatbotId, table.date),
+}));
+
+// TypeScript types for content moderation
+export type ContentModerationRule = typeof contentModerationRules.$inferSelect;
+export type NewContentModerationRule = typeof contentModerationRules.$inferInsert;
+
+export type ContentModerationViolation = typeof contentModerationViolations.$inferSelect;
+export type NewContentModerationViolation = typeof contentModerationViolations.$inferInsert;
+
+export type ContentModerationReview = typeof contentModerationReviews.$inferSelect;
+export type NewContentModerationReview = typeof contentModerationReviews.$inferInsert;
+
+export type ContentModerationAppeal = typeof contentModerationAppeals.$inferSelect;
+export type NewContentModerationAppeal = typeof contentModerationAppeals.$inferInsert;
+
+export type ContentModerationAnalytics = typeof contentModerationAnalytics.$inferSelect;
+export type NewContentModerationAnalytics = typeof contentModerationAnalytics.$inferInsert;
+
+// Content moderation interfaces
+export interface ModerationRuleConfiguration {
+  keywords?: string[];
+  patterns?: string[];
+  thresholds?: {
+    toxicity?: number;
+    spam?: number;
+    sentiment?: number;
+  };
+  whitelist?: string[];
+  customLogic?: string;
+  [key: string]: any;
+}
+
+export interface ModerationContext {
+  messageContent: string;
+  userId?: string;
+  chatbotId: string;
+  conversationId: string;
+  userIdentifier: string;
+  metadata?: {
+    ipAddress?: string;
+    userAgent?: string;
+    sessionId?: string;
+    [key: string]: any;
+  };
+}
+
+export interface ModerationResult {
+  isViolation: boolean;
+  violatedRules: string[];
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  confidenceScore: number;
+  action: 'allow' | 'flag' | 'block' | 'escalate';
+  flaggedContent?: string;
+  reasoning?: string;
+}
+
+// Enhanced message feedback types for reporting
+export const reportCategoryEnum = pgEnum('report_category', [
+  'spam',
+  'inappropriate',
+  'harassment',
+  'misinformation',
+  'offensive_language',
+  'privacy_violation',
+  'copyright',
+  'other'
+]);

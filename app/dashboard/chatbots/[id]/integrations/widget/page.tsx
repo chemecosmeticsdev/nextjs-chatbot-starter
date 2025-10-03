@@ -16,6 +16,15 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
+  Breadcrumb,
+  BreadcrumbEllipsis,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import {
   ArrowLeft,
   Copy,
   Eye,
@@ -391,27 +400,45 @@ export default function WidgetBuilderPage() {
 
   return (
     <div className="container max-w-7xl mx-auto py-6 space-y-6">
+      {/* Breadcrumb Navigation */}
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/dashboard/chatbots">Chatbots</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink href={`/dashboard/chatbots/${chatbotId}`}>
+              Chatbot
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink href={`/dashboard/chatbots/${chatbotId}/integrations`}>
+              Integrations
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Website Widget</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push(`/dashboard/chatbots/${chatbotId}/integrations`)}
-            className="gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Integrations
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Monitor className="h-6 w-6 text-blue-600" />
-              Widget Builder
-            </h1>
-            <p className="text-muted-foreground">
-              Create and customize a chat widget for your website
-            </p>
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Monitor className="h-6 w-6 text-blue-600" />
+            Widget Builder
+          </h1>
+          <p className="text-muted-foreground">
+            Create and customize a chat widget for your website
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant={config.status === "active" ? "default" : "secondary"}>
@@ -428,6 +455,15 @@ export default function WidgetBuilderPage() {
               <Save className="h-4 w-4" />
             )}
             Save Configuration
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push(`/dashboard/chatbots/${chatbotId}/integrations`)}
+            className="gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Integrations
           </Button>
         </div>
       </div>

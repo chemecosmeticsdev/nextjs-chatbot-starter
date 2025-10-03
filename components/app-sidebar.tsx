@@ -11,6 +11,7 @@ import {
   Bot,
   Home,
   Search,
+  Activity,
 } from "lucide-react"
 
 import {
@@ -83,6 +84,12 @@ export function AppSidebar({ user }: AppSidebarProps) {
       title: "Analytics",
       url: "/dashboard/analytics",
       icon: BarChart3,
+      isVisible: user.role === 'admin' || user.role === 'super_admin',
+    },
+    {
+      title: "Live Monitoring",
+      url: "/dashboard/monitoring",
+      icon: Activity,
       isVisible: user.role === 'admin' || user.role === 'super_admin',
     },
     {

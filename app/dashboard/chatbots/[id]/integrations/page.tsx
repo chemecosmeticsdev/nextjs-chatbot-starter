@@ -9,6 +9,15 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Breadcrumb,
+  BreadcrumbEllipsis,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import {
   ArrowLeft,
   Plus,
   ExternalLink,
@@ -213,27 +222,39 @@ export default function IntegrationsOverviewPage() {
 
   return (
     <div className="container max-w-7xl mx-auto py-6 space-y-6">
+      {/* Breadcrumb Navigation */}
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/dashboard/chatbots">Chatbots</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink href={`/dashboard/chatbots/${chatbotId}`}>
+              {chatbot?.name || "Chatbot"}
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Integrations</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.back()}
-            className="gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <LinkIcon className="h-6 w-6" />
-              Integrations
-            </h1>
-            <p className="text-muted-foreground">
-              Connect your chatbot to multiple platforms and services
-            </p>
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <LinkIcon className="h-6 w-6" />
+            Integrations
+          </h1>
+          <p className="text-muted-foreground">
+            Connect your chatbot to multiple platforms and services
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -244,6 +265,15 @@ export default function IntegrationsOverviewPage() {
           >
             <Eye className="h-4 w-4" />
             Test Chatbot
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push(`/dashboard/chatbots/${chatbotId}`)}
+            className="gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Chatbot
           </Button>
         </div>
       </div>
