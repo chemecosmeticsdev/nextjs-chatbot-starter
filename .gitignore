@@ -44,6 +44,7 @@ Thumbs.db
 
 # DeploymentDocs
 # /docs
+DEPLOYMENT.md
 
 # schema
 /schema
