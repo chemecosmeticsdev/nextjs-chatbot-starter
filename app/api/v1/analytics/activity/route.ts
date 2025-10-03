@@ -77,13 +77,43 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Handle unsupported HTTP methods
+ * GET /api/v1/analytics/activity
+ *
+ * Retrieve user activity data for dashboard display
  */
-export async function GET() {
-  return NextResponse.json(
-    createErrorResponse('Method not allowed', 'METHOD_NOT_ALLOWED'),
-    { status: 405 }
-  );
+export async function GET(request: NextRequest) {
+  try {
+    // Verify authentication
+    const user = await AuthTokenService.verifyRequest(request);
+    if (!user) {
+      return NextResponse.json(
+        createErrorResponse('Authentication required', 'UNAUTHORIZED'),
+        { status: 401 }
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10), 200);
+
+    // Get recent activity data from the analytics service
+    const activityData = await AnalyticsService.getRecentActivity({
+      userId: user.id,
+      limit,
+    });
+
+    return NextResponse.json(
+      createSuccessResponse(activityData, 'Activity data retrieved successfully'),
+      { status: 200 }
+    );
+
+  } catch (error) {
+    console.error('Error in GET /api/v1/analytics/activity:', error);
+
+    return NextResponse.json(
+      createErrorResponse('Failed to retrieve activity data', 'ACTIVITY_RETRIEVAL_ERROR'),
+      { status: 500 }
+    );
+  }
 }
 
 export async function PUT() {

@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
+import { useBreadcrumbs } from '@/lib/hooks/use-breadcrumbs';
 import {
   Users,
   Plus,
@@ -50,6 +51,15 @@ interface UserData {
 }
 
 export default function UsersPage() {
+  // Set up breadcrumbs for User Management page
+  useBreadcrumbs({
+    autoGenerate: true,
+    trackAnalytics: false,
+    customTitles: {
+      'users': 'User Management'
+    }
+  });
+
   const router = useRouter()
   const [user, setUser] = React.useState<User | null>(null)
   const [loading, setLoading] = React.useState(true)

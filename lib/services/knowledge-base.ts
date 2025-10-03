@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import { documentChunks, documents, searchQueries, searchResultsCache } from '@/lib/db/schema';
-import { eq, and, inArray, gte, lte, desc, sql, count } from 'drizzle-orm';
+import { eq, and, inArray, gte, lte, desc, sql, count, sum, avg } from 'drizzle-orm';
 import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime';
 import { createHash } from 'crypto';
 import {
@@ -338,13 +338,13 @@ export class KnowledgeBaseService {
       `);
 
       // Get storage stats
-      const [storageStats] = await db.execute(sql`
-        SELECT
-          SUM(COALESCE(file_size, 0)) as total_size,
-          AVG(COALESCE(file_size, 0)) as avg_size
-        FROM ${documents}
-        ${whereCondition ? sql`WHERE ${whereCondition}` : sql``}
-      `);
+      const [storageStats] = await db
+        .select({
+          total_size: sum(documents.fileSize),
+          avg_size: avg(documents.fileSize)
+        })
+        .from(documents)
+        .where(whereCondition);
 
       const avgChunksPerDocument = totalDocs.count > 0
         ? Math.round(totalChunksResult.count / totalDocs.count)
@@ -355,10 +355,10 @@ export class KnowledgeBaseService {
         totalChunks: totalChunksResult.count,
         avgChunksPerDocument,
         documentsByCategory: Object.fromEntries(
-          categoryStats.map((row: any) => [row.category || 'uncategorized', parseInt(row.count)])
+          Array.isArray(categoryStats) ? categoryStats.map((row: any) => [row.category || 'uncategorized', parseInt(row.count)]) : []
         ),
         documentsBySupplier: Object.fromEntries(
-          supplierStats.map((row: any) => [row.supplier || 'unknown', parseInt(row.count)])
+          Array.isArray(supplierStats) ? supplierStats.map((row: any) => [row.supplier || 'unknown', parseInt(row.count)]) : []
         ),
         processingStats: {
           pending: processingStats.find(s => s.status === 'pending')?.count || 0,

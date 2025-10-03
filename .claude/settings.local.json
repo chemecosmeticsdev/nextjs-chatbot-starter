@@ -33,7 +33,8 @@
       "mcp__neon__describe_project",
       "mcp__neon__get_connection_string",
       "Bash(npm run dev:*)",
-      "mcp__playwright__browser_console_messages"
+      "mcp__playwright__browser_console_messages",
+      "Bash(curl:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

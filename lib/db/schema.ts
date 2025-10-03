@@ -52,22 +52,37 @@ export const activityLogs = pgTable('activity_logs', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
 
-// Documents table
+// Document-related enums
+export const documentTypeEnum = pgEnum('document_type', ['inci', 'formulation']);
+export const documentCategoryEnum = pgEnum('document_category', [
+  'information', 'promotional', 'scientific', 'standard', 'testing',
+  'compliance', 'certification', 'safety', 'regulation', 'other'
+]);
+export const processingStatusEnum = pgEnum('processing_status', ['pending', 'processing', 'completed', 'failed']);
+
+// Documents table (updated to match actual database schema)
 export const documents = pgTable('documents', {
   id: uuid('id').primaryKey().defaultRandom(),
-  title: varchar('title', { length: 255 }).notNull(),
-  filename: varchar('filename', { length: 255 }),
+  productId: uuid('product_id').references(() => products.id, { onDelete: 'set null' }),
+  uploadedBy: uuid('uploaded_by').references(() => users.id),
+  documentType: documentTypeEnum('document_type').notNull(),
+  documentCategory: documentCategoryEnum('document_category'),
+  originalFilename: varchar('original_filename', { length: 255 }).notNull(),
+  filePath: varchar('file_path', { length: 255 }).notNull(),
+  fileSizeBytes: varchar('file_size_bytes', { length: 50 }), // Using varchar to match bigint
   mimeType: varchar('mime_type', { length: 100 }),
-  fileSize: integer('file_size'),
-  s3Key: varchar('s3_key', { length: 500 }),
-  s3Bucket: varchar('s3_bucket', { length: 100 }),
-  content: text('content'),
-  extractedText: text('extracted_text'),
-  metadata: jsonb('metadata'),
-  processingStatus: varchar('processing_status', { length: 50 }).default('pending'),
-  uploadedBy: uuid('uploaded_by').notNull().references(() => users.id),
+  metadata: jsonb('metadata').default({}),
+  processingStatus: processingStatusEnum('processing_status').default('pending'),
+  processingError: text('processing_error'),
+  ocrCompletedAt: timestamp('ocr_completed_at', { withTimezone: true }),
+  embeddingCompletedAt: timestamp('embedding_completed_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  // Additional columns for application compatibility
+  title: varchar('title', { length: 255 }),
+  filename: varchar('filename', { length: 255 }),
+  fileSize: integer('file_size'),
 });
 
 // Document Chunks table (for vector embeddings)

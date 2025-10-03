@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
         or(
           ilike(documents.title, `%${search}%`),
           ilike(documents.filename, `%${search}%`),
-          ilike(documents.extractedText, `%${search}%`)
+          ilike(documents.originalFilename, `%${search}%`)
         )
       );
     }
@@ -103,12 +103,22 @@ export async function GET(request: NextRequest) {
 
     // Get chunk counts for each document
     const documentIds = documentsResult.map(d => d.id);
-    const chunkCounts = documentIds.length > 0 ? await db.execute(`
-      SELECT document_id, COUNT(*) as chunk_count
-      FROM document_chunks
-      WHERE document_id = ANY($1)
-      GROUP BY document_id
-    `, [documentIds]) : [];
+    let chunkCounts: any[] = [];
+
+    if (documentIds.length > 0) {
+      try {
+        const result = await db.execute(`
+          SELECT document_id, COUNT(*) as chunk_count
+          FROM document_chunks
+          WHERE document_id = ANY($1)
+          GROUP BY document_id
+        `, [documentIds]);
+        chunkCounts = Array.isArray(result) ? result : [];
+      } catch (error) {
+        console.error('Error fetching chunk counts:', error);
+        chunkCounts = [];
+      }
+    }
 
     const chunkCountMap = Object.fromEntries(
       chunkCounts.map((row: any) => [row.document_id, parseInt(row.chunk_count)])
@@ -194,11 +204,13 @@ export async function POST(request: NextRequest) {
           id: documentId,
           title: uploadData.filename.replace(/\.[^/.]+$/, ''), // Remove extension
           filename: uploadData.filename,
+          originalFilename: uploadData.filename,
+          filePath: `/uploads/${documentId}`, // Virtual path since we store content in chunks
           mimeType: uploadData.mimeType,
           fileSize: content.length,
-          content: uploadData.content,
-          extractedText: content,
-          metadata: uploadData.metadata,
+          fileSizeBytes: content.length.toString(),
+          documentType: 'inci', // Default document type
+          metadata: uploadData.metadata || {},
           processingStatus: 'pending',
           uploadedBy: user.id,
         })

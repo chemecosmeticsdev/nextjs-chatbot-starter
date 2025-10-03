@@ -16,9 +16,10 @@ export async function GET(request: NextRequest) {
       const validation = ApiVersioning.validateVersion(requestedVersion);
 
       if (!validation.valid) {
-        return createErrorResponse(validation.error!, 400, {
+        const errorResponse = createErrorResponse(validation.error!, 'INVALID_VERSION', {
           code: 'INVALID_VERSION'
         });
+        return NextResponse.json(errorResponse, { status: 400 });
       }
 
       const warnings = ApiVersioning.generateVersionWarnings(validation.versionInfo!);
@@ -26,12 +27,13 @@ export async function GET(request: NextRequest) {
         ? ApiVersioning.getMigrationGuide(validation.versionInfo!.version, versionConfig.current)
         : null;
 
-      return createSuccessResponse({
+      const successResponse = createSuccessResponse({
         version: validation.versionInfo!,
         warnings,
         migrationGuide,
         current: versionConfig.current
       });
+      return NextResponse.json(successResponse);
     }
 
     // Get all version information
@@ -42,7 +44,7 @@ export async function GET(request: NextRequest) {
       isCurrent: version.version === versionConfig.current
     }));
 
-    return createSuccessResponse({
+    const successResponse = createSuccessResponse({
       current: versionConfig.current,
       default: versionConfig.defaultVersion,
       supported: supportedVersions,
@@ -57,18 +59,18 @@ export async function GET(request: NextRequest) {
         migrationGuide: '/docs/migration'
       }
     });
+    return NextResponse.json(successResponse);
 
   } catch (error) {
     console.error('Version API error:', error);
-    return createErrorResponse('Internal server error', 500, {
-      code: 'INTERNAL_ERROR'
-    });
+    const errorResponse = createErrorResponse('Internal server error', 'INTERNAL_ERROR');
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 }
 
 /**
  * Migration Guide Endpoint
- * GET /api/v1/version/migration
+ * POST /api/v1/version/migration
  */
 export async function POST(request: NextRequest) {
   try {
@@ -76,20 +78,18 @@ export async function POST(request: NextRequest) {
     const { fromVersion, toVersion } = body;
 
     if (!fromVersion || !toVersion) {
-      return createErrorResponse('Both fromVersion and toVersion are required', 400, {
-        code: 'MISSING_PARAMETERS'
-      });
+      const errorResponse = createErrorResponse('Both fromVersion and toVersion are required', 'MISSING_PARAMETERS');
+      return NextResponse.json(errorResponse, { status: 400 });
     }
 
     const migrationGuide = ApiVersioning.getMigrationGuide(fromVersion, toVersion);
 
     if (!migrationGuide) {
-      return createErrorResponse('Invalid version combination', 400, {
-        code: 'INVALID_VERSION_COMBINATION'
-      });
+      const errorResponse = createErrorResponse('Invalid version combination', 'INVALID_VERSION_COMBINATION');
+      return NextResponse.json(errorResponse, { status: 400 });
     }
 
-    return createSuccessResponse({
+    const successResponse = createSuccessResponse({
       migrationGuide,
       documentation: `/docs/migration/${fromVersion}-to-${toVersion}`,
       support: {
@@ -99,11 +99,11 @@ export async function POST(request: NextRequest) {
         supportContact: 'api-support@chatbot.com'
       }
     });
+    return NextResponse.json(successResponse);
 
   } catch (error) {
     console.error('Migration guide API error:', error);
-    return createErrorResponse('Internal server error', 500, {
-      code: 'INTERNAL_ERROR'
-    });
+    const errorResponse = createErrorResponse('Internal server error', 'INTERNAL_ERROR');
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 }

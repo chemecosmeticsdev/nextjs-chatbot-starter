@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useBreadcrumbs } from '@/lib/hooks/use-breadcrumbs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +25,15 @@ interface Document {
 }
 
 export default function DocumentsPage() {
+  // Set up breadcrumbs for Document Management page
+  useBreadcrumbs({
+    autoGenerate: true,
+    trackAnalytics: false,
+    customTitles: {
+      'documents': 'Document Management'
+    }
+  });
+
   const [documents, setDocuments] = useState<Document[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);

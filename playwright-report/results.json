@@ -1,0 +1,3728 @@
+{
+  "config": {
+    "configFile": "/workspaces/codespaces-blank/chatbot_v1/playwright.config.ts",
+    "rootDir": "/workspaces/codespaces-blank/chatbot_v1/e2e",
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": "/workspaces/codespaces-blank/chatbot_v1/e2e/global-setup.ts",
+    "globalTeardown": "/workspaces/codespaces-blank/chatbot_v1/e2e/global-teardown.ts",
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {},
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "html",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "playwright-report/results.json"
+        }
+      ],
+      [
+        "junit",
+        {
+          "outputFile": "playwright-report/results.xml"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "/workspaces/codespaces-blank/chatbot_v1/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/workspaces/codespaces-blank/chatbot_v1/e2e",
+        "testIgnore": [
+          "node_modules/**",
+          "dist/**",
+          ".next/**"
+        ],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "/workspaces/codespaces-blank/chatbot_v1/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "firefox",
+        "name": "firefox",
+        "testDir": "/workspaces/codespaces-blank/chatbot_v1/e2e",
+        "testIgnore": [
+          "node_modules/**",
+          "dist/**",
+          ".next/**"
+        ],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "/workspaces/codespaces-blank/chatbot_v1/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "webkit",
+        "name": "webkit",
+        "testDir": "/workspaces/codespaces-blank/chatbot_v1/e2e",
+        "testIgnore": [
+          "node_modules/**",
+          "dist/**",
+          ".next/**"
+        ],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "/workspaces/codespaces-blank/chatbot_v1/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "Mobile Chrome",
+        "name": "Mobile Chrome",
+        "testDir": "/workspaces/codespaces-blank/chatbot_v1/e2e",
+        "testIgnore": [
+          "node_modules/**",
+          "dist/**",
+          ".next/**"
+        ],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "/workspaces/codespaces-blank/chatbot_v1/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "Mobile Safari",
+        "name": "Mobile Safari",
+        "testDir": "/workspaces/codespaces-blank/chatbot_v1/e2e",
+        "testIgnore": [
+          "node_modules/**",
+          "dist/**",
+          ".next/**"
+        ],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      }
+    ],
+    "shard": null,
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.55.1",
+    "workers": 1,
+    "webServer": {
+      "command": "npm run dev",
+      "url": "http://localhost:3000",
+      "reuseExistingServer": true,
+      "timeout": 120000
+    }
+  },
+  "suites": [
+    {
+      "title": "widget/widget-builder.spec.ts",
+      "file": "widget/widget-builder.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Widget Builder - Configuration and Setup",
+          "file": "widget/widget-builder.spec.ts",
+          "line": 20,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should load widget builder page with existing configuration",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-b40dc7c6b4e9aad340f2",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 131,
+              "column": 7
+            },
+            {
+              "title": "should customize widget design settings",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-b06c8e4a162b6aad71a9",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 152,
+              "column": 7
+            },
+            {
+              "title": "should configure widget behavior settings",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-3e4de730072a2eb73592",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 201,
+              "column": 7
+            },
+            {
+              "title": "should configure security settings and manage allowed domains",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-0b09bb88c68e59d38e41",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 246,
+              "column": 7
+            },
+            {
+              "title": "should generate and display widget embed code",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-9f86472d378d377b727c",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 304,
+              "column": 7
+            },
+            {
+              "title": "should display analytics settings and widget statistics",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-0f254d6ee1024bb3e184",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 346,
+              "column": 7
+            },
+            {
+              "title": "should display live preview of widget with configuration changes",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-f4494c6d5252c735dddd",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 397,
+              "column": 7
+            },
+            {
+              "title": "should save widget configuration successfully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-025307ec68b58dbc6dde",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 439,
+              "column": 7
+            },
+            {
+              "title": "should navigate using quick actions",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-cbe632d9cd0377d7bdb3",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 479,
+              "column": 7
+            },
+            {
+              "title": "should handle navigation breadcrumbs correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-a290e7e557736f90095d",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 520,
+              "column": 7
+            },
+            {
+              "title": "should handle API errors gracefully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-450ebc4d1f779941879c",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 542,
+              "column": 7
+            },
+            {
+              "title": "should handle save errors gracefully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-4b334640fbd90dd894c5",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 564,
+              "column": 7
+            },
+            {
+              "title": "should load widget builder page with existing configuration",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-7906534b661debc8d059",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 131,
+              "column": 7
+            },
+            {
+              "title": "should customize widget design settings",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-8ff6dafdfe9048d42494",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 152,
+              "column": 7
+            },
+            {
+              "title": "should configure widget behavior settings",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-4b588c9d0e93ec782c6c",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 201,
+              "column": 7
+            },
+            {
+              "title": "should configure security settings and manage allowed domains",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-6bb4f11041b040833401",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 246,
+              "column": 7
+            },
+            {
+              "title": "should generate and display widget embed code",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-7ba5936ad630fec05dfc",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 304,
+              "column": 7
+            },
+            {
+              "title": "should display analytics settings and widget statistics",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-1ec2ac628824eb0f39fd",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 346,
+              "column": 7
+            },
+            {
+              "title": "should display live preview of widget with configuration changes",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-db15c54b398fa8ff3d6e",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 397,
+              "column": 7
+            },
+            {
+              "title": "should save widget configuration successfully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-a82f1ba2075753e5997a",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 439,
+              "column": 7
+            },
+            {
+              "title": "should navigate using quick actions",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-fc1023fa914276fe11fc",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 479,
+              "column": 7
+            },
+            {
+              "title": "should handle navigation breadcrumbs correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-b63c826fdba3c6183a45",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 520,
+              "column": 7
+            },
+            {
+              "title": "should handle API errors gracefully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-40dd823fd592a7c0a78f",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 542,
+              "column": 7
+            },
+            {
+              "title": "should handle save errors gracefully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-43744fddf31a03da4abd",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 564,
+              "column": 7
+            },
+            {
+              "title": "should load widget builder page with existing configuration",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-a3fec1b466c779360b7b",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 131,
+              "column": 7
+            },
+            {
+              "title": "should customize widget design settings",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-dfb5bf5405e6354261e4",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 152,
+              "column": 7
+            },
+            {
+              "title": "should configure widget behavior settings",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-0f340b06e8ecf7b52486",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 201,
+              "column": 7
+            },
+            {
+              "title": "should configure security settings and manage allowed domains",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-6e7dfb6517aa3bc3f68f",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 246,
+              "column": 7
+            },
+            {
+              "title": "should generate and display widget embed code",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-d1d451cd5a5aa7278323",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 304,
+              "column": 7
+            },
+            {
+              "title": "should display analytics settings and widget statistics",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-1a7e6307777a25d403be",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 346,
+              "column": 7
+            },
+            {
+              "title": "should display live preview of widget with configuration changes",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-18ef37752eb42f7635d5",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 397,
+              "column": 7
+            },
+            {
+              "title": "should save widget configuration successfully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-2d2a0ae3d92d0656634b",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 439,
+              "column": 7
+            },
+            {
+              "title": "should navigate using quick actions",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-9622d0b2520ef704f90b",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 479,
+              "column": 7
+            },
+            {
+              "title": "should handle navigation breadcrumbs correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-8e9f16fcbd90d7bdc6a7",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 520,
+              "column": 7
+            },
+            {
+              "title": "should handle API errors gracefully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-29933a618caa63e9248d",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 542,
+              "column": 7
+            },
+            {
+              "title": "should handle save errors gracefully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-7d7b72edaeddabb89a95",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 564,
+              "column": 7
+            },
+            {
+              "title": "should load widget builder page with existing configuration",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-97f01b918784b0261bc7",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 131,
+              "column": 7
+            },
+            {
+              "title": "should customize widget design settings",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-4e27d2d2990be6826f4c",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 152,
+              "column": 7
+            },
+            {
+              "title": "should configure widget behavior settings",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-8b08b47d183216813df5",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 201,
+              "column": 7
+            },
+            {
+              "title": "should configure security settings and manage allowed domains",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-c8afc64c5dec4a93a008",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 246,
+              "column": 7
+            },
+            {
+              "title": "should generate and display widget embed code",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-06de8d2228a7a82fe331",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 304,
+              "column": 7
+            },
+            {
+              "title": "should display analytics settings and widget statistics",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-f3006a1c40b7bf4d2c00",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 346,
+              "column": 7
+            },
+            {
+              "title": "should display live preview of widget with configuration changes",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-26bba21ee641da161c6b",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 397,
+              "column": 7
+            },
+            {
+              "title": "should save widget configuration successfully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-8a47a5aa7d3a7499828a",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 439,
+              "column": 7
+            },
+            {
+              "title": "should navigate using quick actions",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-e28225892591a871c71e",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 479,
+              "column": 7
+            },
+            {
+              "title": "should handle navigation breadcrumbs correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-74c7e5e7ecea7c3da1ca",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 520,
+              "column": 7
+            },
+            {
+              "title": "should handle API errors gracefully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-3564b62226cb028908db",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 542,
+              "column": 7
+            },
+            {
+              "title": "should handle save errors gracefully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-eeca661b1ed60273d46d",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 564,
+              "column": 7
+            },
+            {
+              "title": "should load widget builder page with existing configuration",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-bbfea9916e717da02907",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 131,
+              "column": 7
+            },
+            {
+              "title": "should customize widget design settings",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-f047af73aee56f87d448",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 152,
+              "column": 7
+            },
+            {
+              "title": "should configure widget behavior settings",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-211cc0ef8eb56b5b3710",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 201,
+              "column": 7
+            },
+            {
+              "title": "should configure security settings and manage allowed domains",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-817ffd3cac8adca4534b",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 246,
+              "column": 7
+            },
+            {
+              "title": "should generate and display widget embed code",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-6e1345e3b206689c949d",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 304,
+              "column": 7
+            },
+            {
+              "title": "should display analytics settings and widget statistics",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-8810434541a62d5b5665",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 346,
+              "column": 7
+            },
+            {
+              "title": "should display live preview of widget with configuration changes",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-9601798bd46d40c31991",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 397,
+              "column": 7
+            },
+            {
+              "title": "should save widget configuration successfully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-cb3c65232651d7ccb896",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 439,
+              "column": 7
+            },
+            {
+              "title": "should navigate using quick actions",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-1b60d9b983b347116646",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 479,
+              "column": 7
+            },
+            {
+              "title": "should handle navigation breadcrumbs correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-ba209876cc34347a5f6d",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 520,
+              "column": 7
+            },
+            {
+              "title": "should handle API errors gracefully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-ee961f5d8354169a049d",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 542,
+              "column": 7
+            },
+            {
+              "title": "should handle save errors gracefully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-869c237dc6bf60c9b114",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 564,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "Widget Builder - End-to-End Workflow",
+          "file": "widget/widget-builder.spec.ts",
+          "line": 597,
+          "column": 6,
+          "specs": [
+            {
+              "title": "complete widget setup workflow from dashboard to embed code",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-34bdcf7c41218625e31b",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 600,
+              "column": 7
+            },
+            {
+              "title": "complete widget setup workflow from dashboard to embed code",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-3d5863924df23a95306f",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 600,
+              "column": 7
+            },
+            {
+              "title": "complete widget setup workflow from dashboard to embed code",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-df87850da064df53d5e2",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 600,
+              "column": 7
+            },
+            {
+              "title": "complete widget setup workflow from dashboard to embed code",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-091b8ab66a3182c8a94c",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 600,
+              "column": 7
+            },
+            {
+              "title": "complete widget setup workflow from dashboard to embed code",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8bf5476b8fa129f8487c-82521899d72665c3b300",
+              "file": "widget/widget-builder.spec.ts",
+              "line": 600,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "widget/widget-integration-flow.spec.ts",
+      "file": "widget/widget-integration-flow.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Widget Integration - Complete User Journey",
+          "file": "widget/widget-integration-flow.spec.ts",
+          "line": 12,
+          "column": 6,
+          "specs": [
+            {
+              "title": "user journey: navigate from dashboard to widget setup",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3b578df3afc8350216e0-ff376554566c690261f9",
+              "file": "widget/widget-integration-flow.spec.ts",
+              "line": 69,
+              "column": 7
+            },
+            {
+              "title": "complete widget configuration and code generation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3b578df3afc8350216e0-0a90763afd69ea30fec1",
+              "file": "widget/widget-integration-flow.spec.ts",
+              "line": 132,
+              "column": 7
+            },
+            {
+              "title": "widget preview reflects configuration changes in real-time",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3b578df3afc8350216e0-8a65cb73f3eee2fa772c",
+              "file": "widget/widget-integration-flow.spec.ts",
+              "line": 292,
+              "column": 7
+            },
+            {
+              "title": "handle widget analytics and performance tracking",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3b578df3afc8350216e0-14d9370d44d165b8e93c",
+              "file": "widget/widget-integration-flow.spec.ts",
+              "line": 391,
+              "column": 7
+            },
+            {
+              "title": "validate widget deployment workflow",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3b578df3afc8350216e0-45f875b22a320d0f1f76",
+              "file": "widget/widget-integration-flow.spec.ts",
+              "line": 466,
+              "column": 7
+            },
+            {
+              "title": "verify widget security settings and domain restrictions",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3b578df3afc8350216e0-6d952b016d5c66f13797",
+              "file": "widget/widget-integration-flow.spec.ts",
+              "line": 541,
+              "column": 7
+            },
+            {
+              "title": "user journey: navigate from dashboard to widget setup",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3b578df3afc8350216e0-64a6ea01b965404f29a2",
+              "file": "widget/widget-integration-flow.spec.ts",
+              "line": 69,
+              "column": 7
+            },
+            {
+              "title": "complete widget configuration and code generation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3b578df3afc8350216e0-6b94b5a1f2f050c2043e",
+              "file": "widget/widget-integration-flow.spec.ts",
+              "line": 132,
+              "column": 7
+            },
+            {
+              "title": "widget preview reflects configuration changes in real-time",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3b578df3afc8350216e0-ec101759142149bfa4ab",
+              "file": "widget/widget-integration-flow.spec.ts",
+              "line": 292,
+              "column": 7
+            },
+            {
+              "title": "handle widget analytics and performance tracking",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3b578df3afc8350216e0-2f94a4aa12db60fef666",
+              "file": "widget/widget-integration-flow.spec.ts",
+              "line": 391,
+              "column": 7
+            },
+            {
+              "title": "validate widget deployment workflow",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3b578df3afc8350216e0-2fdb8d00cd95ba641135",
+              "file": "widget/widget-integration-flow.spec.ts",
+              "line": 466,
+              "column": 7
+            },
+            {
+              "title": "verify widget security settings and domain restrictions",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3b578df3afc8350216e0-59f07f56800b69a55c2f",
+              "file": "widget/widget-integration-flow.spec.ts",
+              "line": 541,
+              "column": 7
+            },
+            {
+              "title": "user journey: navigate from dashboard to widget setup",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3b578df3afc8350216e0-df8d43273eefc87c9cfc",
+              "file": "widget/widget-integration-flow.spec.ts",
+              "line": 69,
+              "column": 7
+            },
+            {
+              "title": "complete widget configuration and code generation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3b578df3afc8350216e0-c6c390a61480818ed889",
+              "file": "widget/widget-integration-flow.spec.ts",
+              "line": 132,
+              "column": 7
+            },
+            {
+              "title": "widget preview reflects configuration changes in real-time",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3b578df3afc8350216e0-8c76dfddc04ea46e586a",
+              "file": "widget/widget-integration-flow.spec.ts",
+              "line": 292,
+              "column": 7
+            },
+            {
+              "title": "handle widget analytics and performance tracking",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3b578df3afc8350216e0-7ead5c03176af4f68573",
+              "file": "widget/widget-integration-flow.spec.ts",
+              "line": 391,
+              "column": 7
+            },
+            {
+              "title": "validate widget deployment workflow",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3b578df3afc8350216e0-9f5e60c7f13b7d447069",
+              "file": "widget/widget-integration-flow.spec.ts",
+              "line": 466,
+              "column": 7
+            },
+            {
+              "title": "verify widget security settings and domain restrictions",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3b578df3afc8350216e0-d1821e41d1a57552e703",
+              "file": "widget/widget-integration-flow.spec.ts",
+              "line": 541,
+              "column": 7
+            },
+            {
+              "title": "user journey: navigate from dashboard to widget setup",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3b578df3afc8350216e0-8cc2dddcdca9bdb58469",
+              "file": "widget/widget-integration-flow.spec.ts",
+              "line": 69,
+              "column": 7
+            },
+            {
+              "title": "complete widget configuration and code generation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3b578df3afc8350216e0-8011e9e47f8f5e7f32ad",
+              "file": "widget/widget-integration-flow.spec.ts",
+              "line": 132,
+              "column": 7
+            },
+            {
+              "title": "widget preview reflects configuration changes in real-time",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3b578df3afc8350216e0-b115f857c420e7752566",
+              "file": "widget/widget-integration-flow.spec.ts",
+              "line": 292,
+              "column": 7
+            },
+            {
+              "title": "handle widget analytics and performance tracking",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3b578df3afc8350216e0-f1387f4ff5cab4f31bda",
+              "file": "widget/widget-integration-flow.spec.ts",
+              "line": 391,
+              "column": 7
+            },
+            {
+              "title": "validate widget deployment workflow",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3b578df3afc8350216e0-1e8cbfdf52fda3be4bb0",
+              "file": "widget/widget-integration-flow.spec.ts",
+              "line": 466,
+              "column": 7
+            },
+            {
+              "title": "verify widget security settings and domain restrictions",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3b578df3afc8350216e0-633aec88324f55f94d4a",
+              "file": "widget/widget-integration-flow.spec.ts",
+              "line": 541,
+              "column": 7
+            },
+            {
+              "title": "user journey: navigate from dashboard to widget setup",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3b578df3afc8350216e0-f2ac3f4a4c39baf3bb17",
+              "file": "widget/widget-integration-flow.spec.ts",
+              "line": 69,
+              "column": 7
+            },
+            {
+              "title": "complete widget configuration and code generation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3b578df3afc8350216e0-1eb6b4e2c9a6d014dcbb",
+              "file": "widget/widget-integration-flow.spec.ts",
+              "line": 132,
+              "column": 7
+            },
+            {
+              "title": "widget preview reflects configuration changes in real-time",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3b578df3afc8350216e0-7612ff9e737ee677c4ed",
+              "file": "widget/widget-integration-flow.spec.ts",
+              "line": 292,
+              "column": 7
+            },
+            {
+              "title": "handle widget analytics and performance tracking",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3b578df3afc8350216e0-b60a7e4c133391a151c9",
+              "file": "widget/widget-integration-flow.spec.ts",
+              "line": 391,
+              "column": 7
+            },
+            {
+              "title": "validate widget deployment workflow",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3b578df3afc8350216e0-df1447b6bf6580a5f07a",
+              "file": "widget/widget-integration-flow.spec.ts",
+              "line": 466,
+              "column": 7
+            },
+            {
+              "title": "verify widget security settings and domain restrictions",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3b578df3afc8350216e0-ba82e906f45d9e5839eb",
+              "file": "widget/widget-integration-flow.spec.ts",
+              "line": 541,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "widget/widget-preview.spec.ts",
+      "file": "widget/widget-preview.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Widget Preview and Embed Testing",
+          "file": "widget/widget-preview.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should render widget preview page correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-c38920adb0c9429ae004",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 55,
+              "column": 7
+            },
+            {
+              "title": "should display widget with correct theme configuration",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-cba27d87d0b7cf1c0b54",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 67,
+              "column": 7
+            },
+            {
+              "title": "should open and close widget on bubble click",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-ce9047d774772297a257",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 86,
+              "column": 7
+            },
+            {
+              "title": "should display greeting message when widget opens",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-8429c9a9dc4889e8e4ac",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 110,
+              "column": 7
+            },
+            {
+              "title": "should show correct bot name in widget header",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-205777fd55134eda229b",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 127,
+              "column": 7
+            },
+            {
+              "title": "should display typing indicator when enabled",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-0550db92cb5235499b30",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 142,
+              "column": 7
+            },
+            {
+              "title": "should respect widget position configuration",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-8b7281b45ce208d5fb74",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 161,
+              "column": 7
+            },
+            {
+              "title": "should allow message input and submission",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-90474392cb468b14a687",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 182,
+              "column": 7
+            },
+            {
+              "title": "should show powered by branding when enabled",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-4d508bdb3440401ed4f9",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 225,
+              "column": 7
+            },
+            {
+              "title": "should handle mobile viewport correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-8d864da3ab3fc5b1a99f",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 244,
+              "column": 7
+            },
+            {
+              "title": "should render widget preview page correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-aa4b02ac315f2a2aec32",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 55,
+              "column": 7
+            },
+            {
+              "title": "should display widget with correct theme configuration",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-a81e1477a5320308a8ea",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 67,
+              "column": 7
+            },
+            {
+              "title": "should open and close widget on bubble click",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-afd7fdbef03a83c113ca",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 86,
+              "column": 7
+            },
+            {
+              "title": "should display greeting message when widget opens",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-7b48e9a15c7af49735a8",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 110,
+              "column": 7
+            },
+            {
+              "title": "should show correct bot name in widget header",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-c8bb17f8983f4653ca85",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 127,
+              "column": 7
+            },
+            {
+              "title": "should display typing indicator when enabled",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-ccf8ab9dd0c318a1b864",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 142,
+              "column": 7
+            },
+            {
+              "title": "should respect widget position configuration",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-6932b457dd968a8fbbff",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 161,
+              "column": 7
+            },
+            {
+              "title": "should allow message input and submission",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-3e3258a43480fbe9df4e",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 182,
+              "column": 7
+            },
+            {
+              "title": "should show powered by branding when enabled",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-28a60c14ce4f3a7d9141",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 225,
+              "column": 7
+            },
+            {
+              "title": "should handle mobile viewport correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-8b1dbbcc327b6b173118",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 244,
+              "column": 7
+            },
+            {
+              "title": "should render widget preview page correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-15ffae6d149297c8d025",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 55,
+              "column": 7
+            },
+            {
+              "title": "should display widget with correct theme configuration",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-d91938baafb6a00608a8",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 67,
+              "column": 7
+            },
+            {
+              "title": "should open and close widget on bubble click",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-c8edeab2c98d9bfb6c53",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 86,
+              "column": 7
+            },
+            {
+              "title": "should display greeting message when widget opens",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-30dc8a0381e85d5a188d",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 110,
+              "column": 7
+            },
+            {
+              "title": "should show correct bot name in widget header",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-7777a89ca770222097b7",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 127,
+              "column": 7
+            },
+            {
+              "title": "should display typing indicator when enabled",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-22a7e2e7fa0786cfe38b",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 142,
+              "column": 7
+            },
+            {
+              "title": "should respect widget position configuration",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-b449c0988b96196759e4",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 161,
+              "column": 7
+            },
+            {
+              "title": "should allow message input and submission",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-c0a73e7ba68f54add2be",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 182,
+              "column": 7
+            },
+            {
+              "title": "should show powered by branding when enabled",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-bc4114773c7b8f62cbcd",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 225,
+              "column": 7
+            },
+            {
+              "title": "should handle mobile viewport correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-9a6d5eea9f5c8aec4fb9",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 244,
+              "column": 7
+            },
+            {
+              "title": "should render widget preview page correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-d1a120b282e4f47a0ee6",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 55,
+              "column": 7
+            },
+            {
+              "title": "should display widget with correct theme configuration",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-a912f658b977bf653ef7",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 67,
+              "column": 7
+            },
+            {
+              "title": "should open and close widget on bubble click",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-9b16cf4875152a44ca0b",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 86,
+              "column": 7
+            },
+            {
+              "title": "should display greeting message when widget opens",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-b31ee43cfaadf95338e6",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 110,
+              "column": 7
+            },
+            {
+              "title": "should show correct bot name in widget header",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-f52d48336ae4959009f6",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 127,
+              "column": 7
+            },
+            {
+              "title": "should display typing indicator when enabled",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-ffe436ce476c17ab0666",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 142,
+              "column": 7
+            },
+            {
+              "title": "should respect widget position configuration",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-22787c2a0cab1888231f",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 161,
+              "column": 7
+            },
+            {
+              "title": "should allow message input and submission",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-c61daadb93ef73d417e2",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 182,
+              "column": 7
+            },
+            {
+              "title": "should show powered by branding when enabled",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-d427bd89a6ab746787d5",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 225,
+              "column": 7
+            },
+            {
+              "title": "should handle mobile viewport correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-75caab140a58bde11b73",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 244,
+              "column": 7
+            },
+            {
+              "title": "should render widget preview page correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-f1c0ad12afc66aaabf5c",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 55,
+              "column": 7
+            },
+            {
+              "title": "should display widget with correct theme configuration",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-7747aaef3becf58c649c",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 67,
+              "column": 7
+            },
+            {
+              "title": "should open and close widget on bubble click",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-c3aa583e567d1a9bcc8d",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 86,
+              "column": 7
+            },
+            {
+              "title": "should display greeting message when widget opens",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-9d5ebf97c2042c145194",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 110,
+              "column": 7
+            },
+            {
+              "title": "should show correct bot name in widget header",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-e83514f31a34a425785e",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 127,
+              "column": 7
+            },
+            {
+              "title": "should display typing indicator when enabled",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-928410f621c1534f0ddc",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 142,
+              "column": 7
+            },
+            {
+              "title": "should respect widget position configuration",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-62c6295f74f414113390",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 161,
+              "column": 7
+            },
+            {
+              "title": "should allow message input and submission",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-3717d32aaa26785f57f3",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 182,
+              "column": 7
+            },
+            {
+              "title": "should show powered by branding when enabled",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-d71d66c2888283405823",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 225,
+              "column": 7
+            },
+            {
+              "title": "should handle mobile viewport correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-3ebfa2ee1a318c1be946",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 244,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "Widget Loader Script",
+          "file": "widget/widget-preview.spec.ts",
+          "line": 275,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should load widget loader script successfully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-2bdba3c19717a7d48f4e",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 278,
+              "column": 7
+            },
+            {
+              "title": "should handle loader script errors gracefully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-8a21bd287f054e822d3d",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 329,
+              "column": 7
+            },
+            {
+              "title": "should load widget loader script successfully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-5bf910ebdc0516f1075e",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 278,
+              "column": 7
+            },
+            {
+              "title": "should handle loader script errors gracefully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-002145380371c6ec3bb9",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 329,
+              "column": 7
+            },
+            {
+              "title": "should load widget loader script successfully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-8b5c30e32fde424ace64",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 278,
+              "column": 7
+            },
+            {
+              "title": "should handle loader script errors gracefully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-836defa02b82d2314850",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 329,
+              "column": 7
+            },
+            {
+              "title": "should load widget loader script successfully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-980694a437f5975a452e",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 278,
+              "column": 7
+            },
+            {
+              "title": "should handle loader script errors gracefully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-3a7f52cc49a707632571",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 329,
+              "column": 7
+            },
+            {
+              "title": "should load widget loader script successfully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-c656f53cc9f936602c5c",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 278,
+              "column": 7
+            },
+            {
+              "title": "should handle loader script errors gracefully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-13b48a213a326233f093",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 329,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "Widget Chat Functionality",
+          "file": "widget/widget-preview.spec.ts",
+          "line": 369,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should handle chat conversation flow",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-9ad1541cc55139fbd0fe",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 391,
+              "column": 7
+            },
+            {
+              "title": "should maintain conversation context",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-79e563b72de2e62f0378",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 417,
+              "column": 7
+            },
+            {
+              "title": "should display error message on chat API failure",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-661d166e4e040f4c2c94",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 445,
+              "column": 7
+            },
+            {
+              "title": "should clear conversation when reset button is clicked",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-fed0d679b7c9a82d30d8",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 480,
+              "column": 7
+            },
+            {
+              "title": "should handle chat conversation flow",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-91ce9a03081c76dbda59",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 391,
+              "column": 7
+            },
+            {
+              "title": "should maintain conversation context",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-552934d82d919869c8ac",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 417,
+              "column": 7
+            },
+            {
+              "title": "should display error message on chat API failure",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-48e80e0eb568ad4cd6b0",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 445,
+              "column": 7
+            },
+            {
+              "title": "should clear conversation when reset button is clicked",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-81ce563e2f4919e5a9bd",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 480,
+              "column": 7
+            },
+            {
+              "title": "should handle chat conversation flow",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-b95b3e3de55cf12aa3b0",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 391,
+              "column": 7
+            },
+            {
+              "title": "should maintain conversation context",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-6b908a947a7795c36b15",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 417,
+              "column": 7
+            },
+            {
+              "title": "should display error message on chat API failure",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-79949cb3a67e42e87307",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 445,
+              "column": 7
+            },
+            {
+              "title": "should clear conversation when reset button is clicked",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-28e86b2176ef87c60727",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 480,
+              "column": 7
+            },
+            {
+              "title": "should handle chat conversation flow",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-97ec3643564e67adf291",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 391,
+              "column": 7
+            },
+            {
+              "title": "should maintain conversation context",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-478f99d64bc2823e1a86",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 417,
+              "column": 7
+            },
+            {
+              "title": "should display error message on chat API failure",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-04664c895145201ded33",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 445,
+              "column": 7
+            },
+            {
+              "title": "should clear conversation when reset button is clicked",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-b323b68c7776b30ca55c",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 480,
+              "column": 7
+            },
+            {
+              "title": "should handle chat conversation flow",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-55f6f7856db1fa133ad7",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 391,
+              "column": 7
+            },
+            {
+              "title": "should maintain conversation context",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-422b43d99c40b460fa75",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 417,
+              "column": 7
+            },
+            {
+              "title": "should display error message on chat API failure",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-f646f10d539fd0eec1fe",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 445,
+              "column": 7
+            },
+            {
+              "title": "should clear conversation when reset button is clicked",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "86df27ac2805327cefcb-f1aadd227502c4df4e1a",
+              "file": "widget/widget-preview.spec.ts",
+              "line": 480,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2025-10-03T09:58:11.300Z",
+    "duration": 740.196,
+    "expected": 0,
+    "skipped": 175,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

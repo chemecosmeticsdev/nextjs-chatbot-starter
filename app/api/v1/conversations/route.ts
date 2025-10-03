@@ -63,13 +63,45 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Handle unsupported HTTP methods
+ * GET /api/v1/conversations
+ *
+ * List conversations with filtering and pagination
  */
-export async function GET() {
-  return NextResponse.json(
-    createErrorResponse('Method not allowed', 'METHOD_NOT_ALLOWED'),
-    { status: 405 }
-  );
+export async function GET(request: NextRequest) {
+  try {
+    // Verify authentication
+    const user = await AuthTokenService.verifyRequest(request);
+    if (!user) {
+      return NextResponse.json(
+        createErrorResponse('Authentication required', 'UNAUTHORIZED'),
+        { status: 401 }
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const limit = Math.min(parseInt(searchParams.get('limit') || '20', 10), 100);
+    const status = searchParams.get('status'); // active, ended, etc.
+
+    // Get conversations from the service
+    const conversations = await ConversationService.getConversations({
+      userId: user.id,
+      limit,
+      status,
+    });
+
+    return NextResponse.json(
+      createSuccessResponse(conversations, 'Conversations retrieved successfully'),
+      { status: 200 }
+    );
+
+  } catch (error) {
+    console.error('Error in GET /api/v1/conversations:', error);
+
+    return NextResponse.json(
+      createErrorResponse('Failed to retrieve conversations', 'CONVERSATION_ERROR'),
+      { status: 500 }
+    );
+  }
 }
 
 export async function PUT() {

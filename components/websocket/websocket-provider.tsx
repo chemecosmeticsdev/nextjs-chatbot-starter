@@ -140,7 +140,7 @@ export function WebSocketProvider({
         client.disconnect();
       }
     };
-  }, [user, token, autoConnect, enableNotifications, toast]);
+  }, [user, token, autoConnect, enableNotifications]);
 
   // Handle global WebSocket messages
   const handleGlobalMessage = (message: WebSocketMessage) => {

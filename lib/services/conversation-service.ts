@@ -286,6 +286,57 @@ export class ConversationService {
   }
 
   /**
+   * Get conversations for a user (for dashboard display)
+   */
+  static async getConversations(options: {
+    userId?: string;
+    limit?: number;
+    status?: string;
+  }): Promise<ConversationResponse[]> {
+    try {
+      const { userId, limit = 20, status } = options;
+
+      let whereConditions = [];
+
+      // Filter by active/ended status if specified
+      if (status === 'active') {
+        whereConditions.push(eq(chatbotConversations.endedAt, null));
+      } else if (status === 'ended') {
+        whereConditions.push(sql`${chatbotConversations.endedAt} IS NOT NULL`);
+      }
+
+      // Get conversations
+      const conversations = await db
+        .select()
+        .from(chatbotConversations)
+        .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
+        .orderBy(desc(chatbotConversations.lastActivityAt))
+        .limit(Math.min(limit, 100));
+
+      const formattedConversations = await Promise.all(
+        conversations.map(async (conv) => {
+          const response = this.formatConversationResponse(conv);
+
+          // Get message count
+          const [messageCount] = await db
+            .select({ count: count() })
+            .from(chatbotMessages)
+            .where(eq(chatbotMessages.conversationId, conv.id));
+
+          response.messageCount = messageCount.count;
+          return response;
+        })
+      );
+
+      return formattedConversations;
+
+    } catch (error) {
+      console.error('Error getting conversations:', error);
+      throw new Error('Failed to get conversations');
+    }
+  }
+
+  /**
    * List conversations for a chatbot
    */
   static async listConversations(

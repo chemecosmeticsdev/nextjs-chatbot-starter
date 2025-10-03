@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useBreadcrumbs } from '@/lib/hooks/use-breadcrumbs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -72,6 +73,15 @@ interface ModerationStats {
 }
 
 export default function ModerationDashboard() {
+  // Set up breadcrumbs for Content Moderation page
+  useBreadcrumbs({
+    autoGenerate: true,
+    trackAnalytics: false,
+    customTitles: {
+      'moderation': 'Content Moderation'
+    }
+  });
+
   const [activeTab, setActiveTab] = useState('overview');
   const [violations, setViolations] = useState<ModerationViolation[]>([]);
   const [rules, setRules] = useState<ModerationRule[]>([]);

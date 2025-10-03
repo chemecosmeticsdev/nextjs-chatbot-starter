@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
+import { useBreadcrumbs } from '@/lib/hooks/use-breadcrumbs';
 import {
   MapPin,
   Calendar,
@@ -69,6 +70,15 @@ interface Preferences {
 }
 
 export default function ProfilePage() {
+  // Set up breadcrumbs for User Profile page
+  useBreadcrumbs({
+    autoGenerate: true,
+    trackAnalytics: false,
+    customTitles: {
+      'profile': 'User Profile'
+    }
+  });
+
   const router = useRouter()
   const { theme, setTheme } = useTheme()
   const [user, setUser] = React.useState<User | null>(null)

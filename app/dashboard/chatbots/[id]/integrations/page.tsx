@@ -185,7 +185,8 @@ export default function IntegrationsOverviewPage() {
     });
   };
 
-  const formatNumber = (num: number) => {
+  const formatNumber = (num: number | undefined | null) => {
+    if (num == null || num === undefined) return "0";
     if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
     if (num >= 1000) return (num / 1000).toFixed(1) + "K";
     return num.toString();
@@ -310,7 +311,7 @@ export default function IntegrationsOverviewPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Total Messages</p>
-                  <p className="text-2xl font-bold">{formatNumber(stats.total_messages)}</p>
+                  <p className="text-2xl font-bold">{formatNumber(stats?.total_messages)}</p>
                 </div>
                 <MessageSquare className="h-8 w-8 text-purple-600" />
               </div>
@@ -322,7 +323,7 @@ export default function IntegrationsOverviewPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Total Users</p>
-                  <p className="text-2xl font-bold">{formatNumber(stats.total_users)}</p>
+                  <p className="text-2xl font-bold">{formatNumber(stats?.total_users)}</p>
                 </div>
                 <Users className="h-8 w-8 text-orange-600" />
               </div>
@@ -400,11 +401,11 @@ export default function IntegrationsOverviewPage() {
                               <div className="flex items-center gap-4 text-xs text-muted-foreground">
                                 <span className="flex items-center gap-1">
                                   <MessageSquare className="h-3 w-3" />
-                                  {formatNumber(integration.usage_stats.messages)} messages
+                                  {formatNumber(integration.usage_stats?.messages)} messages
                                 </span>
                                 <span className="flex items-center gap-1">
                                   <Users className="h-3 w-3" />
-                                  {formatNumber(integration.usage_stats.users)} users
+                                  {formatNumber(integration.usage_stats?.users)} users
                                 </span>
                                 <span className="flex items-center gap-1">
                                   <Activity className="h-3 w-3" />
@@ -534,19 +535,19 @@ export default function IntegrationsOverviewPage() {
                             <div className="grid grid-cols-3 gap-4 mb-4">
                               <div className="text-center">
                                 <p className="text-2xl font-bold text-blue-600">
-                                  {formatNumber(integration.usage_stats.messages)}
+                                  {formatNumber(integration.usage_stats?.messages)}
                                 </p>
                                 <p className="text-xs text-muted-foreground">Messages</p>
                               </div>
                               <div className="text-center">
                                 <p className="text-2xl font-bold text-green-600">
-                                  {formatNumber(integration.usage_stats.users)}
+                                  {formatNumber(integration.usage_stats?.users)}
                                 </p>
                                 <p className="text-xs text-muted-foreground">Users</p>
                               </div>
                               <div className="text-center">
                                 <p className="text-2xl font-bold text-purple-600">
-                                  {formatNumber(integration.usage_stats.sessions)}
+                                  {formatNumber(integration.usage_stats?.sessions)}
                                 </p>
                                 <p className="text-xs text-muted-foreground">Sessions</p>
                               </div>

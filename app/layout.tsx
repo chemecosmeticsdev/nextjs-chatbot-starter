@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
+import { BreadcrumbProvider } from "@/lib/context/breadcrumb-context"
+import { breadcrumbRouteConfig } from "@/lib/config/breadcrumb-routes"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -26,13 +28,18 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <ThemeProvider>
-          <div className="min-h-screen bg-background font-sans antialiased">
-            <div className="relative flex min-h-screen flex-col">
-              <div className="flex-1">
-                {children}
+          <BreadcrumbProvider
+            routeConfig={breadcrumbRouteConfig}
+            enableAutoGeneration={true}
+          >
+            <div className="min-h-screen bg-background font-sans antialiased">
+              <div className="relative flex min-h-screen flex-col">
+                <div className="flex-1">
+                  {children}
+                </div>
               </div>
             </div>
-          </div>
+          </BreadcrumbProvider>
         </ThemeProvider>
       </body>
     </html>

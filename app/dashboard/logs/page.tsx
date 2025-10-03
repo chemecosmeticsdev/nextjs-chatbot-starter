@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useBreadcrumbs } from '@/lib/hooks/use-breadcrumbs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,6 +34,15 @@ interface LogEntry {
 }
 
 export default function LogsPage() {
+  // Set up breadcrumbs for Activity Logs page
+  useBreadcrumbs({
+    autoGenerate: true,
+    trackAnalytics: false,
+    customTitles: {
+      'logs': 'Activity Logs'
+    }
+  });
+
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [filteredLogs, setFilteredLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);

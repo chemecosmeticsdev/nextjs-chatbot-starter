@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useBreadcrumbs } from '@/lib/hooks/use-breadcrumbs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -67,6 +68,15 @@ const AdminSettingsSchema = z.object({
 });
 
 export default function SettingsPage() {
+  // Set up breadcrumbs for System Settings page
+  useBreadcrumbs({
+    autoGenerate: true,
+    trackAnalytics: false,
+    customTitles: {
+      'settings': 'System Settings'
+    }
+  });
+
   // Simple alert fallback instead of toast
   const [settings, setSettings] = useState<Record<string, AdminSetting>>({});
   const [bedrockModels, setBedrockModels] = useState<BedrockModel[]>([]);

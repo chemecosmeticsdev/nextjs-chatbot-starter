@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useBreadcrumbs } from '@/lib/hooks/use-breadcrumbs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -90,6 +91,15 @@ interface SearchResult {
 }
 
 export default function KnowledgeBasePage() {
+  // Set up breadcrumbs for Knowledge Base page
+  useBreadcrumbs({
+    autoGenerate: true,
+    trackAnalytics: false,
+    customTitles: {
+      'knowledge-base': 'Knowledge Base'
+    }
+  });
+
   const [activeTab, setActiveTab] = useState('search');
   const [documents, setDocuments] = useState<Document[]>([]);
   const [stats, setStats] = useState<KnowledgeBaseStats | null>(null);
@@ -142,16 +152,27 @@ export default function KnowledgeBasePage() {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch documents: ${response.statusText}`);
+        // Enhanced error handling for server errors
+        if (response.status === 500) {
+          throw new Error(`Internal Server Error: The knowledge base service is temporarily unavailable. Please try again.`);
+        } else if (response.status === 404) {
+          throw new Error(`Knowledge base endpoint not found. Please check the API configuration.`);
+        } else {
+          throw new Error(`Failed to fetch documents: ${response.statusText} (${response.status})`);
+        }
       }
 
       const data = await response.json();
       if (!data.success) {
-        throw new Error('Failed to load documents');
+        throw new Error(data.message || 'Failed to load documents');
       }
 
-      setDocuments(data.data.documents);
-      setTotalPages(data.data.pagination.totalPages);
+      // Add defensive programming for documents array
+      const documents = Array.isArray(data.data?.documents) ? data.data.documents : [];
+      const pagination = data.data?.pagination || { totalPages: 1 };
+
+      setDocuments(documents);
+      setTotalPages(pagination.totalPages || 1);
     } catch (err: any) {
       console.error('Error fetching documents:', err);
       setError(err.message || 'Failed to load documents');
@@ -204,15 +225,24 @@ export default function KnowledgeBasePage() {
       });
 
       if (!response.ok) {
-        throw new Error(`Search failed: ${response.statusText}`);
+        // Enhanced error handling for search failures
+        if (response.status === 500) {
+          throw new Error(`Search service temporarily unavailable. Please try again.`);
+        } else if (response.status === 404) {
+          throw new Error(`Search endpoint not found. Please check the API configuration.`);
+        } else {
+          throw new Error(`Search failed: ${response.statusText} (${response.status})`);
+        }
       }
 
       const data = await response.json();
       if (!data.success) {
-        throw new Error('Search failed');
+        throw new Error(data.message || 'Search failed');
       }
 
-      setSearchResults(data.data.results);
+      // Add defensive programming for search results
+      const results = Array.isArray(data.data?.results) ? data.data.results : [];
+      setSearchResults(results);
     } catch (err: any) {
       console.error('Error performing search:', err);
       setError(err.message || 'Search failed');
@@ -295,14 +325,20 @@ export default function KnowledgeBasePage() {
               className="ml-2"
               onClick={() => {
                 setError(null);
+                // Enhanced retry logic with specific tab handling
                 if (activeTab === 'documents') {
                   fetchDocuments();
-                } else if (activeTab === 'overview') {
+                } else if (activeTab === 'search') {
+                  // Retry search if there was a search query
+                  if (searchQuery.trim()) {
+                    performSearch();
+                  }
+                } else {
                   fetchStats();
                 }
               }}
             >
-              Retry
+              Try Again
             </Button>
           </AlertDescription>
         </Alert>

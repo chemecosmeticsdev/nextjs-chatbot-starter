@@ -23,6 +23,51 @@ jest.mock('next/navigation', () => {
   }
 })
 
+// Mock Next.js server components
+jest.mock('next/server', () => ({
+  NextRequest: class NextRequest extends Request {
+    constructor(input, init) {
+      super(input, init)
+      this.nextUrl = new URL(input)
+      this.cookies = {
+        get: jest.fn(),
+        set: jest.fn(),
+        delete: jest.fn(),
+      }
+    }
+  },
+  NextResponse: {
+    json: jest.fn((data, init) => {
+      const response = new Response(JSON.stringify(data), {
+        ...init,
+        headers: {
+          'content-type': 'application/json',
+          ...(init?.headers || {}),
+        },
+      })
+      response.json = () => Promise.resolve(data)
+      return response
+    }),
+    redirect: jest.fn((url, status = 302) => {
+      const response = new Response(null, {
+        status,
+        headers: { Location: url },
+      })
+      return response
+    }),
+    rewrite: jest.fn((url) => {
+      const response = new Response(null, {
+        status: 200,
+        headers: { 'x-middleware-rewrite': url },
+      })
+      return response
+    }),
+    next: jest.fn(() => {
+      return new Response(null, { status: 200 })
+    }),
+  },
+}))
+
 // Mock next-themes
 jest.mock('next-themes', () => ({
   useTheme: jest.fn(() => ({

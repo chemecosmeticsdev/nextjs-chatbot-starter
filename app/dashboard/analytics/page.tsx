@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useWebSocketContext } from '@/components/websocket/websocket-provider';
+import { useBreadcrumbs } from '@/lib/hooks/use-breadcrumbs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -97,7 +98,28 @@ export default function AnalyticsPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+
+  // Set up breadcrumbs for analytics page
+  useBreadcrumbs({
+    autoGenerate: true,
+    trackAnalytics: false, // Disable analytics to reduce overhead
+    customTitles: {
+      '/dashboard/analytics': 'Analytics Dashboard'
+    }
+  });
   const [dashboardMetrics, setDashboardMetrics] = useState<DashboardMetrics | null>(null);
+
+  // Accessibility announcements
+  const [announcements, setAnnouncements] = useState<string[]>([]);
+
+  // Accessibility helper function
+  const announceToScreenReader = (message: string) => {
+    setAnnouncements(prev => [...prev, message]);
+    // Clear announcement after screen reader has time to read it
+    setTimeout(() => {
+      setAnnouncements(prev => prev.slice(1));
+    }, 3000);
+  };
   const [performanceMetrics, setPerformanceMetrics] = useState<PerformanceMetrics | null>(null);
   const [sessionAnalytics, setSessionAnalytics] = useState<SessionAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
@@ -380,6 +402,11 @@ export default function AnalyticsPage() {
 
   // Helper functions
   const formatNumber = (num: number, decimals: number = 0): string => {
+    // Add type validation and null/undefined checks
+    if (num == null || typeof num !== 'number' || isNaN(num)) {
+      return '0';
+    }
+
     if (num >= 1000000) {
       return (num / 1000000).toFixed(decimals) + 'M';
     } else if (num >= 1000) {
