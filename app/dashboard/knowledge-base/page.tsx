@@ -115,7 +115,7 @@ export default function KnowledgeBasePage() {
   const [searchFilters, setSearchFilters] = useState({
     categories: [] as string[],
     documentTypes: [] as string[],
-    threshold: 0.7
+    threshold: 0.5
   });
 
   // Pagination
@@ -440,6 +440,8 @@ export default function KnowledgeBasePage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="0.3">30% Match</SelectItem>
+                    <SelectItem value="0.4">40% Match</SelectItem>
                     <SelectItem value="0.5">50% Match</SelectItem>
                     <SelectItem value="0.6">60% Match</SelectItem>
                     <SelectItem value="0.7">70% Match</SelectItem>

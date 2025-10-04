@@ -11,6 +11,7 @@ import {
 import { formatValidationErrors } from '@/lib/validation/common';
 import { db } from '@/lib/db';
 import { documents } from '@/lib/db/schema';
+import { sql } from 'drizzle-orm';
 import { and, eq, gte, lte, ilike, or, desc, count } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 
@@ -107,13 +108,23 @@ export async function GET(request: NextRequest) {
 
     if (documentIds.length > 0) {
       try {
-        const result = await db.execute(`
-          SELECT document_id, COUNT(*) as chunk_count
-          FROM document_chunks
-          WHERE document_id = ANY($1)
-          GROUP BY document_id
-        `, [documentIds]);
-        chunkCounts = Array.isArray(result) ? result : [];
+        // Use Drizzle's inArray function for proper parameter binding
+        const { inArray } = await import('drizzle-orm');
+        const { documentChunks } = await import('@/lib/db/schema');
+
+        const result = await db
+          .select({
+            documentId: documentChunks.documentId,
+            chunkCount: count(),
+          })
+          .from(documentChunks)
+          .where(inArray(documentChunks.documentId, documentIds))
+          .groupBy(documentChunks.documentId);
+
+        chunkCounts = result.map(row => ({
+          document_id: row.documentId,
+          chunk_count: row.chunkCount
+        }));
       } catch (error) {
         console.error('Error fetching chunk counts:', error);
         chunkCounts = [];

@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import { documentChunks, documents, searchQueries, searchResultsCache } from '@/lib/db/schema';
+import { documentChunks, documents, searchQueries, searchResultsCache, systemSettings } from '@/lib/db/schema';
 import { eq, and, inArray, gte, lte, desc, sql, count, sum, avg } from 'drizzle-orm';
 import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime';
 import { createHash } from 'crypto';
@@ -11,41 +11,133 @@ import {
   type SearchPerformanceMetrics
 } from '@/lib/validation/knowledge-base';
 
-export class KnowledgeBaseService {
-  private static bedrockClient: BedrockRuntimeClient;
+interface AwsCredentials {
+  accessKeyId: string;
+  secretAccessKey: string;
+  region: string;
+}
 
-  static {
-    // Initialize Bedrock client for embeddings
-    this.bedrockClient = new BedrockRuntimeClient({
-      region: process.env.BEDROCK_REGION || 'us-east-1',
-      credentials: {
-        accessKeyId: process.env.BAWS_ACCESS_KEY_ID!,
-        secretAccessKey: process.env.BAWS_SECRET_ACCESS_KEY!,
-      },
-    });
+export class KnowledgeBaseService {
+  private static bedrockClient: BedrockRuntimeClient | null = null;
+  private static credentialsCache: AwsCredentials | null = null;
+  private static credentialsCacheExpiry: number = 0;
+
+  /**
+   * Get AWS credentials with hierarchy: system settings first, then .env.local fallback
+   */
+  private static async getAwsCredentials(): Promise<AwsCredentials> {
+    // Return cached credentials if still valid (cache for 5 minutes)
+    if (this.credentialsCache && Date.now() < this.credentialsCacheExpiry) {
+      return this.credentialsCache;
+    }
+
+    try {
+      // First, try to get credentials from system settings
+      const systemCredentials = await db
+        .select()
+        .from(systemSettings)
+        .where(eq(systemSettings.key, 'aws_bedrock_credentials'))
+        .limit(1);
+
+      if (systemCredentials.length > 0) {
+        const credentials = systemCredentials[0].value as any;
+        if (credentials.accessKeyId && credentials.secretAccessKey) {
+          console.log('Using AWS credentials from system settings');
+          this.credentialsCache = {
+            accessKeyId: credentials.accessKeyId,
+            secretAccessKey: credentials.secretAccessKey,
+            region: credentials.region || process.env.BEDROCK_REGION || 'us-east-1'
+          };
+          this.credentialsCacheExpiry = Date.now() + 5 * 60 * 1000; // Cache for 5 minutes
+          return this.credentialsCache;
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to fetch credentials from system settings:', error);
+    }
+
+    // Fallback to environment variables
+    console.log('Using AWS credentials from environment variables (.env.local)');
+    const envCredentials = {
+      accessKeyId: process.env.BAWS_ACCESS_KEY_ID,
+      secretAccessKey: process.env.BAWS_SECRET_ACCESS_KEY,
+      region: process.env.BEDROCK_REGION || 'us-east-1'
+    };
+
+    if (!envCredentials.accessKeyId || !envCredentials.secretAccessKey) {
+      throw new Error('AWS credentials not found in system settings or environment variables');
+    }
+
+    this.credentialsCache = envCredentials;
+    this.credentialsCacheExpiry = Date.now() + 5 * 60 * 1000; // Cache for 5 minutes
+    return this.credentialsCache;
   }
 
   /**
-   * Generate text embedding using AWS Bedrock Titan
+   * Get initialized Bedrock client with proper credentials
    */
-  private static async generateEmbedding(text: string, model = 'amazon.titan-embed-text-v2'): Promise<number[]> {
+  private static async getBedrockClient(): Promise<BedrockRuntimeClient> {
+    if (!this.bedrockClient || Date.now() >= this.credentialsCacheExpiry) {
+      const credentials = await this.getAwsCredentials();
+
+      this.bedrockClient = new BedrockRuntimeClient({
+        region: credentials.region,
+        credentials: {
+          accessKeyId: credentials.accessKeyId,
+          secretAccessKey: credentials.secretAccessKey,
+        },
+      });
+    }
+
+    return this.bedrockClient;
+  }
+
+  /**
+   * Generate text embedding using AWS Bedrock Titan v2 with 512 dimensions
+   */
+  private static async generateEmbedding(text: string, model = 'amazon.titan-embed-text-v2:0'): Promise<number[]> {
     try {
+      const bedrockClient = await this.getBedrockClient();
+
+      // Truncate text to fit within Titan v2's max token limit (8192 tokens)
+      const truncatedText = text.substring(0, 8000);
+
       const command = new InvokeModelCommand({
         modelId: model,
         contentType: 'application/json',
         accept: 'application/json',
-        body: JSON.stringify({
-          inputText: text.substring(0, 8000), // Titan has a token limit
-        }),
+        body: new TextEncoder().encode(JSON.stringify({
+          inputText: truncatedText,
+          dimensions: 512, // Use 512 dimensions for 99% accuracy with 50% storage savings
+          normalize: true, // Enable normalization for better cosine similarity in RAG
+        })),
       });
 
-      const response = await this.bedrockClient.send(command);
+      const response = await bedrockClient.send(command);
       const responseBody = JSON.parse(new TextDecoder().decode(response.body));
+
+      if (!responseBody.embedding || !Array.isArray(responseBody.embedding)) {
+        throw new Error('Invalid embedding response from Titan v2');
+      }
+
+      // Validate embedding dimensions
+      if (responseBody.embedding.length !== 512) {
+        throw new Error(`Expected 512 dimensions, got ${responseBody.embedding.length}`);
+      }
 
       return responseBody.embedding;
     } catch (error) {
-      console.error('Error generating embedding:', error);
-      throw new Error('Failed to generate text embedding');
+      console.error('Error generating embedding with Titan v2:', error);
+
+      // Provide specific error messages for common issues
+      if (error.message?.includes('The provided model identifier is invalid')) {
+        throw new Error('AWS Bedrock Titan v2 model not available in region. Ensure model access is enabled in AWS Bedrock console.');
+      }
+      if (error.message?.includes('credentials')) {
+        throw new Error('AWS credentials invalid. Check system settings or environment variables.');
+      }
+
+      throw new Error(`Failed to generate text embedding: ${error.message}`);
     }
   }
 
@@ -157,7 +249,7 @@ export class KnowledgeBaseService {
   }
 
   /**
-   * Perform vector similarity search
+   * Perform optimized vector similarity search using direct SQL for performance
    */
   static async vectorSearch(params: KnowledgeBaseSearchRequest): Promise<{
     results: VectorSearchResult[];
@@ -183,55 +275,59 @@ export class KnowledgeBaseService {
       // Generate embedding for the query
       const queryEmbedding = await this.generateEmbedding(params.query);
 
-      // Build document filters
-      const documentFilters = this.buildDocumentFilters(params.filters);
+      // Build document filter conditions for direct SQL
+      const filterConditions = this.buildSqlFilterConditions(params.filters);
 
-      // Perform vector similarity search with SQL
-      const searchQuery = sql`
+      // Convert embedding to pgvector format
+      const embeddingVector = `[${queryEmbedding.join(',')}]`;
+
+      // Use optimized SQL with proper Drizzle syntax for performance
+      const baseQuery = sql`
         SELECT
           dc.id as chunk_id,
           dc.document_id,
           dc.content,
           dc.chunk_index,
           dc.metadata as chunk_metadata,
-          d.title as document_name,
-          d.filename,
+          COALESCE(d.title, d.original_filename, d.filename) as document_name,
+          d.original_filename as filename,
           d.metadata as document_metadata,
-          (dc.embedding <=> ${JSON.stringify(queryEmbedding)}::vector) as distance,
-          (1 - (dc.embedding <=> ${JSON.stringify(queryEmbedding)}::vector)) as similarity
-        FROM ${documentChunks} dc
-        INNER JOIN ${documents} d ON dc.document_id = d.id
+          (dc.embedding <=> ${embeddingVector}::vector) as distance,
+          (1 - (dc.embedding <=> ${embeddingVector}::vector)) as similarity
+        FROM document_chunks dc
+        INNER JOIN documents d ON dc.document_id = d.id
         WHERE
           dc.embedding IS NOT NULL
           AND d.processing_status = 'completed'
-          ${documentFilters ? sql`AND ${documentFilters}` : sql``}
-          AND (1 - (dc.embedding <=> ${JSON.stringify(queryEmbedding)}::vector)) >= ${params.threshold}
-        ORDER BY dc.embedding <=> ${JSON.stringify(queryEmbedding)}::vector
+          AND d.deleted_at IS NULL
+          AND (1 - (dc.embedding <=> ${embeddingVector}::vector)) >= ${params.threshold}
+        ORDER BY dc.embedding <=> ${embeddingVector}::vector ASC
         LIMIT ${params.limit}
       `;
 
-      const rawResults = await db.execute(searchQuery);
+      // Execute the optimized query
+      const rawResults = await db.execute(baseQuery);
 
-      // Transform results
-      const results: VectorSearchResult[] = rawResults.map((row: any) => ({
+      // Transform results with proper type handling
+      const results: VectorSearchResult[] = (rawResults.rows || rawResults).map((row: any) => ({
         documentId: row.document_id,
         chunkId: row.chunk_id,
         content: params.includeContent ? row.content : '',
-        similarity: parseFloat(row.similarity),
+        similarity: parseFloat(row.similarity.toFixed(4)),
         metadata: {
-          documentName: row.document_name,
-          filename: row.filename,
-          category: row.document_metadata?.category,
-          supplier: row.document_metadata?.supplier,
-          tags: row.document_metadata?.tags || [],
-          chunkIndex: row.chunk_index,
-          ...row.chunk_metadata
+          documentName: row.document_name || 'Untitled Document',
+          filename: row.filename || 'unknown',
+          category: this.safeJsonParse(row.document_metadata)?.category || 'uncategorized',
+          supplier: this.safeJsonParse(row.document_metadata)?.supplier || 'unknown',
+          tags: this.safeJsonParse(row.document_metadata)?.tags || [],
+          chunkIndex: row.chunk_index || 0,
+          ...this.safeJsonParse(row.chunk_metadata)
         }
       }));
 
       const searchTime = Date.now() - startTime;
 
-      // Cache results if enabled
+      // Cache results if enabled and we have results
       if (params.cacheResults && results.length > 0) {
         await this.cacheResults(queryHash, params.query, params.filters || {}, results);
       }
@@ -244,7 +340,85 @@ export class KnowledgeBaseService {
 
     } catch (error) {
       console.error('Vector search error:', error);
-      throw new Error('Failed to perform vector search');
+
+      // Provide specific error messages for debugging
+      if (error.message?.includes('vector')) {
+        throw new Error('Vector database operation failed. Check pgvector extension and database schema.');
+      }
+      if (error.message?.includes('embedding')) {
+        throw new Error('Failed to generate query embedding. Check AWS Bedrock configuration.');
+      }
+
+      throw new Error(`Vector search failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Build SQL filter conditions for direct SQL queries
+   */
+  private static buildSqlFilterConditions(filters: KnowledgeBaseSearchRequest['filters'] = {}): {
+    sql: string;
+    params: any[];
+  } {
+    const conditions: string[] = [];
+    const params: any[] = [];
+    let paramIndex = 4; // Start from $4 since $1-$3 are reserved for main query
+
+    if (filters.documentTypes && filters.documentTypes.length > 0) {
+      conditions.push(`d.mime_type = ANY($${paramIndex})`);
+      params.push(filters.documentTypes);
+      paramIndex++;
+    }
+
+    if (filters.documentIds && filters.documentIds.length > 0) {
+      conditions.push(`d.id = ANY($${paramIndex})`);
+      params.push(filters.documentIds);
+      paramIndex++;
+    }
+
+    if (filters.dateRange) {
+      if (filters.dateRange.from) {
+        conditions.push(`d.created_at >= $${paramIndex}`);
+        params.push(new Date(filters.dateRange.from));
+        paramIndex++;
+      }
+      if (filters.dateRange.to) {
+        conditions.push(`d.created_at <= $${paramIndex}`);
+        params.push(new Date(filters.dateRange.to));
+        paramIndex++;
+      }
+    }
+
+    if (filters.categories && filters.categories.length > 0) {
+      conditions.push(`d.metadata->>'category' = ANY($${paramIndex})`);
+      params.push(filters.categories);
+      paramIndex++;
+    }
+
+    if (filters.supplierIds && filters.supplierIds.length > 0) {
+      conditions.push(`d.metadata->>'supplierId' = ANY($${paramIndex})`);
+      params.push(filters.supplierIds);
+      paramIndex++;
+    }
+
+    const sqlCondition = conditions.length > 0 ? `AND ${conditions.join(' AND ')}` : '';
+
+    return {
+      sql: sqlCondition,
+      params
+    };
+  }
+
+  /**
+   * Safely parse JSON with fallback
+   */
+  private static safeJsonParse(jsonString: any): any {
+    if (!jsonString) return {};
+    if (typeof jsonString === 'object') return jsonString;
+    try {
+      return JSON.parse(jsonString);
+    } catch {
+      return {};
     }
   }
 
@@ -355,10 +529,10 @@ export class KnowledgeBaseService {
         totalChunks: totalChunksResult.count,
         avgChunksPerDocument,
         documentsByCategory: Object.fromEntries(
-          Array.isArray(categoryStats) ? categoryStats.map((row: any) => [row.category || 'uncategorized', parseInt(row.count)]) : []
+          (categoryStats.rows || categoryStats || []).map((row: any) => [row.category || 'uncategorized', parseInt(row.count)])
         ),
         documentsBySupplier: Object.fromEntries(
-          Array.isArray(supplierStats) ? supplierStats.map((row: any) => [row.supplier || 'unknown', parseInt(row.count)]) : []
+          (supplierStats.rows || supplierStats || []).map((row: any) => [row.supplier || 'unknown', parseInt(row.count)])
         ),
         processingStats: {
           pending: processingStats.find(s => s.status === 'pending')?.count || 0,
@@ -587,11 +761,14 @@ export class KnowledgeBaseService {
       try {
         const embedding = await this.generateEmbedding(chunk);
 
+        // Convert embedding to proper vector format for pgvector
+        const embeddingVector = `[${embedding.join(',')}]`;
+
         await db.insert(documentChunks).values({
           documentId,
           chunkIndex: i,
           content: chunk,
-          embedding: JSON.stringify(embedding),
+          embedding: embeddingVector as any, // Cast to any for proper vector insertion
           metadata: {
             chunkSize: chunk.length,
             totalChunks: chunks.length

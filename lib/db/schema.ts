@@ -83,6 +83,7 @@ export const documents = pgTable('documents', {
   title: varchar('title', { length: 255 }),
   filename: varchar('filename', { length: 255 }),
   fileSize: integer('file_size'),
+  extractedText: text('extracted_text'), // Add extracted text field
 });
 
 // Document Chunks table (for vector embeddings)
@@ -91,7 +92,7 @@ export const documentChunks = pgTable('document_chunks', {
   documentId: uuid('document_id').notNull().references(() => documents.id, { onDelete: 'cascade' }),
   chunkIndex: integer('chunk_index').notNull(),
   content: text('content').notNull(),
-  embedding: vector('embedding', { dimensions: 1536 }), // OpenAI/Titan embedding dimension
+  embedding: vector('embedding', { dimensions: 512 }), // Optimized 512-dimension for Titan v2
   metadata: jsonb('metadata'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 }, (table) => ({
