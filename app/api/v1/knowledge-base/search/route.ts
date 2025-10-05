@@ -3,8 +3,8 @@ import { AuthTokenService } from '@/lib/auth';
 import { createErrorResponse, createSuccessResponse } from '@/lib/api-utils';
 import { KnowledgeBaseService } from '@/lib/services/knowledge-base';
 import {
-  knowledgeBaseSearchSchema,
-  type KnowledgeBaseSearchRequest,
+  adaptiveKnowledgeBaseSearchSchema,
+  type AdaptiveKnowledgeBaseSearchRequest,
   type KnowledgeBaseSearchResponse
 } from '@/lib/validation/knowledge-base';
 import { formatValidationErrors } from '@/lib/validation/common';
@@ -26,10 +26,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse and validate request body
-    let searchParams: KnowledgeBaseSearchRequest;
+    let searchParams: AdaptiveKnowledgeBaseSearchRequest;
     try {
       const rawBody = await request.json();
-      searchParams = knowledgeBaseSearchSchema.parse(rawBody);
+      searchParams = adaptiveKnowledgeBaseSearchSchema.parse(rawBody);
     } catch (error) {
       return NextResponse.json(
         createErrorResponse(
@@ -47,8 +47,47 @@ export async function POST(request: NextRequest) {
                     'unknown';
     const sessionId = request.headers.get('x-session-id') || undefined;
 
-    // Perform vector search
-    const searchResult = await KnowledgeBaseService.vectorSearch(searchParams);
+    // Perform enhanced adaptive vector search
+    const searchStartTime = Date.now();
+    let searchResult;
+    let searchMethod = 'vector';
+    let thresholdUsed = searchParams.threshold;
+
+    try {
+      if (searchParams.enableAdaptiveThreshold) {
+        // Use adaptive search with dynamic threshold selection
+        const { AdaptiveSearchService } = await import('@/lib/services/adaptive-search');
+        const adaptiveParams = {
+          query: searchParams.query,
+          limit: searchParams.limit,
+          baseThreshold: searchParams.threshold,
+          enableFallback: searchParams.enableFallback,
+          maxFallbackAttempts: searchParams.maxFallbackAttempts,
+          minimumResults: searchParams.minimumResults,
+          filters: searchParams.filters || {},
+          includeContent: searchParams.includeContent,
+          cacheResults: searchParams.cacheResults
+        };
+
+        const adaptiveResult = await AdaptiveSearchService.adaptiveSearch(adaptiveParams);
+        searchResult = {
+          results: adaptiveResult.results,
+          searchTime: Date.now() - searchStartTime,
+          cached: adaptiveResult.cached || false
+        };
+        searchMethod = adaptiveResult.searchMethod || 'adaptive';
+        thresholdUsed = adaptiveResult.thresholdUsed || searchParams.threshold;
+      } else {
+        // Use basic vector search
+        searchResult = await KnowledgeBaseService.vectorSearch(searchParams);
+        searchMethod = 'vector';
+      }
+    } catch (error) {
+      console.error('Enhanced search failed, falling back to basic vector search:', error);
+      // Fallback to basic vector search if enhanced search fails
+      searchResult = await KnowledgeBaseService.vectorSearch(searchParams);
+      searchMethod = 'vector_fallback';
+    }
 
     // Log search query for analytics
     await KnowledgeBaseService.logSearchQuery(
@@ -64,6 +103,7 @@ export async function POST(request: NextRequest) {
     // Log search for audit purposes
     console.log(
       `Knowledge base search - User: ${user.id}, Query: "${searchParams.query}", ` +
+      `Method: ${searchMethod}, Threshold: ${thresholdUsed}, ` +
       `Results: ${searchResult.results.length}, Time: ${searchResult.searchTime}ms, ` +
       `Cached: ${searchResult.cached}`
     );
@@ -76,7 +116,9 @@ export async function POST(request: NextRequest) {
         totalResults: searchResult.results.length,
         searchTime: searchResult.searchTime,
         cached: searchResult.cached,
-        filters: searchParams.filters
+        filters: searchParams.filters,
+        searchMethod,
+        thresholdUsed
       }
     };
 

@@ -21,7 +21,18 @@ export const knowledgeBaseSearchSchema = z.object({
   cacheResults: z.boolean().optional().default(true)
 }).strict();
 
+/**
+ * Enhanced Knowledge Base Search Request Schema with Adaptive Features
+ */
+export const adaptiveKnowledgeBaseSearchSchema = knowledgeBaseSearchSchema.extend({
+  enableAdaptiveThreshold: z.boolean().optional().default(true),
+  enableFallback: z.boolean().optional().default(true),
+  maxFallbackAttempts: z.number().int().min(1, 'Must allow at least 1 attempt').max(5, 'Cannot exceed 5 attempts').optional().default(3),
+  minimumResults: z.number().int().min(1, 'Must require at least 1 result').max(20, 'Cannot require more than 20 results').optional().default(5)
+}).strict();
+
 export type KnowledgeBaseSearchRequest = z.infer<typeof knowledgeBaseSearchSchema>;
+export type AdaptiveKnowledgeBaseSearchRequest = z.infer<typeof adaptiveKnowledgeBaseSearchSchema>;
 
 /**
  * Knowledge Base Update Request Schema
@@ -133,6 +144,8 @@ export interface KnowledgeBaseSearchResponse {
     searchTime: number;
     cached: boolean;
     filters?: Record<string, any>;
+    searchMethod?: string;
+    thresholdUsed?: number;
   };
 }
 

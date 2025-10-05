@@ -90,6 +90,15 @@ interface SearchResult {
   };
 }
 
+interface SearchFilters {
+  categories: string[];
+  documentTypes: string[];
+  threshold: number;
+  searchMethod: string;
+  limit: number;
+  enableAdaptive: boolean;
+}
+
 export default function KnowledgeBasePage() {
   // Set up breadcrumbs for Knowledge Base page
   useBreadcrumbs({
@@ -112,10 +121,13 @@ export default function KnowledgeBasePage() {
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [searchFilters, setSearchFilters] = useState({
-    categories: [] as string[],
-    documentTypes: [] as string[],
-    threshold: 0.5
+  const [searchFilters, setSearchFilters] = useState<SearchFilters>({
+    categories: [],
+    documentTypes: [],
+    threshold: 0.7,
+    searchMethod: 'adaptive',
+    limit: 20,
+    enableAdaptive: true
   });
 
   // Pagination
@@ -207,21 +219,28 @@ export default function KnowledgeBasePage() {
       setSearchLoading(true);
       setError(null);
 
+      // Enhanced search parameters for adaptive and hybrid search
+      const searchParams = {
+        query: searchQuery.trim(),
+        limit: searchFilters.limit || 20,
+        threshold: searchFilters.threshold,
+        enableAdaptiveThreshold: searchFilters.enableAdaptive !== false,
+        enableFallback: true,
+        maxFallbackAttempts: 3,
+        minimumResults: 3,
+        filters: {
+          categories: searchFilters.categories.length > 0 ? searchFilters.categories : undefined,
+          documentTypes: searchFilters.documentTypes.length > 0 ? searchFilters.documentTypes : undefined
+        },
+        includeContent: true,
+        cacheResults: true
+      };
+
       const response = await fetch('/api/v1/knowledge-base/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-          query: searchQuery,
-          limit: 20,
-          threshold: searchFilters.threshold,
-          filters: {
-            categories: searchFilters.categories.length > 0 ? searchFilters.categories : undefined,
-            documentTypes: searchFilters.documentTypes.length > 0 ? searchFilters.documentTypes : undefined
-          },
-          includeContent: true,
-          cacheResults: true
-        })
+        body: JSON.stringify(searchParams)
       });
 
       if (!response.ok) {
@@ -243,8 +262,17 @@ export default function KnowledgeBasePage() {
       // Add defensive programming for search results
       const results = Array.isArray(data.data?.results) ? data.data.results : [];
       setSearchResults(results);
+
+      // Update search metadata display
+      if (data.data?.searchMethod || data.data?.thresholdUsed) {
+        console.log(
+          `Enhanced search completed - Method: ${data.data.searchMethod}, ` +
+          `Threshold: ${data.data.thresholdUsed}, Time: ${data.data.searchTime}ms, ` +
+          `Results: ${results.length}`
+        );
+      }
     } catch (err: any) {
-      console.error('Error performing search:', err);
+      console.error('Error performing enhanced search:', err);
       setError(err.message || 'Search failed');
     } finally {
       setSearchLoading(false);
@@ -412,77 +440,163 @@ export default function KnowledgeBasePage() {
         <TabsContent value="search" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Vector Similarity Search</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Search className="w-5 h-5" />
+                Enhanced Vector Similarity Search
+              </CardTitle>
               <CardDescription>
-                Search through document chunks using semantic similarity
+                Advanced semantic search with adaptive thresholds and hybrid capabilities
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex gap-2">
                 <Input
-                  placeholder="Enter your search query..."
+                  placeholder="Enter your search query... (e.g., 'machine learning algorithms', 'cosmetic ingredients', 'AWS Bedrock')"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && performSearch()}
                   className="flex-1"
                 />
                 <Button onClick={performSearch} disabled={searchLoading}>
-                  <Search className="mr-2 h-4 w-4" />
+                  {searchLoading ? (
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Search className="mr-2 h-4 w-4" />
+                  )}
                   {searchLoading ? 'Searching...' : 'Search'}
                 </Button>
               </div>
 
-              <div className="flex gap-2">
-                <Select value={searchFilters.threshold.toString()} onValueChange={(value) =>
-                  setSearchFilters(prev => ({ ...prev, threshold: parseFloat(value) }))
-                }>
-                  <SelectTrigger className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="0.3">30% Match</SelectItem>
-                    <SelectItem value="0.4">40% Match</SelectItem>
-                    <SelectItem value="0.5">50% Match</SelectItem>
-                    <SelectItem value="0.6">60% Match</SelectItem>
-                    <SelectItem value="0.7">70% Match</SelectItem>
-                    <SelectItem value="0.8">80% Match</SelectItem>
-                    <SelectItem value="0.9">90% Match</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button variant="outline" size="sm">
-                  <Filter className="mr-2 h-4 w-4" />
-                  Filters
-                </Button>
+              {/* Enhanced Search Configuration */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Search Method</label>
+                  <Select value={searchFilters.searchMethod || 'adaptive'} onValueChange={(value) =>
+                    setSearchFilters(prev => ({ ...prev, searchMethod: value }))
+                  }>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="adaptive">Adaptive (Recommended)</SelectItem>
+                      <SelectItem value="vector">Vector Only</SelectItem>
+                      <SelectItem value="hybrid">Hybrid (Vector + Keyword)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Threshold: {searchFilters.threshold.toFixed(2)}</label>
+                  <Select value={searchFilters.threshold.toString()} onValueChange={(value) =>
+                    setSearchFilters(prev => ({ ...prev, threshold: parseFloat(value) }))
+                  }>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0.3">0.30 (Broad)</SelectItem>
+                      <SelectItem value="0.4">0.40</SelectItem>
+                      <SelectItem value="0.5">0.50 (Balanced)</SelectItem>
+                      <SelectItem value="0.6">0.60</SelectItem>
+                      <SelectItem value="0.7">0.70 (Precise)</SelectItem>
+                      <SelectItem value="0.8">0.80</SelectItem>
+                      <SelectItem value="0.9">0.90 (Very Precise)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Result Limit</label>
+                  <Select value={(searchFilters.limit || 20).toString()} onValueChange={(value) =>
+                    setSearchFilters(prev => ({ ...prev, limit: parseInt(value) }))
+                  }>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="5">5 Results</SelectItem>
+                      <SelectItem value="10">10 Results</SelectItem>
+                      <SelectItem value="20">20 Results</SelectItem>
+                      <SelectItem value="50">50 Results</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Enhanced Features</label>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="adaptive"
+                      checked={searchFilters.enableAdaptive !== false}
+                      onChange={(e) => setSearchFilters(prev => ({ ...prev, enableAdaptive: e.target.checked }))}
+                      className="rounded"
+                    />
+                    <label htmlFor="adaptive" className="text-sm">Adaptive Thresholds</label>
+                  </div>
+                </div>
               </div>
 
-              {/* Search Results */}
+              {/* Search Results with Enhanced Display */}
               <div className="space-y-3">
                 {searchResults.map((result, index) => (
                   <Card key={`${result.chunkId}-${index}`} className="p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <h4 className="font-medium">{result.metadata.documentName}</h4>
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="space-y-1">
+                        <h4 className="font-medium">{result.metadata.documentName || 'Unknown Document'}</h4>
                         <div className="flex gap-2 text-sm text-muted-foreground">
-                          <span>Similarity: {(result.similarity * 100).toFixed(1)}%</span>
+                          <span>Chunk {result.metadata.chunkIndex || 'N/A'}</span>
                           {result.metadata.category && (
-                            <Badge variant="outline">{result.metadata.category}</Badge>
+                            <Badge variant="secondary">{result.metadata.category}</Badge>
                           )}
                           {result.metadata.supplier && (
                             <Badge variant="outline">{result.metadata.supplier}</Badge>
                           )}
                         </div>
                       </div>
-                      <Badge variant="secondary">
-                        Chunk {result.metadata.chunkIndex || 0}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge className={
+                          result.similarity >= 0.9 ? 'bg-green-100 text-green-800' :
+                          result.similarity >= 0.7 ? 'bg-blue-100 text-blue-800' :
+                          result.similarity >= 0.5 ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-gray-100 text-gray-800'
+                        }>
+                          {(result.similarity * 100).toFixed(1)}%
+                        </Badge>
+                      </div>
                     </div>
-                    <p className="text-sm leading-relaxed">{result.content}</p>
+
+                    <div className="bg-gray-50 rounded p-3 mb-3">
+                      <p className="text-sm leading-relaxed">{result.content}</p>
+                    </div>
+
+                    {result.metadata.tags && result.metadata.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {result.metadata.tags.map((tag, tagIndex) => (
+                          <Badge key={tagIndex} variant="outline" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
                   </Card>
                 ))}
 
                 {searchResults.length === 0 && searchQuery && !searchLoading && (
                   <div className="text-center py-8 text-muted-foreground">
-                    No results found for "{searchQuery}"
+                    <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>No results found for "{searchQuery}"</p>
+                    <p className="text-sm mt-2">Try adjusting your search terms or lowering the similarity threshold</p>
+                  </div>
+                )}
+
+                {!searchQuery && !searchLoading && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Enter a search query to find relevant documents</p>
+                    <p className="text-sm mt-2">
+                      Try searches like "machine learning", "cosmetic ingredients", or "AWS documentation"
+                    </p>
                   </div>
                 )}
               </div>
