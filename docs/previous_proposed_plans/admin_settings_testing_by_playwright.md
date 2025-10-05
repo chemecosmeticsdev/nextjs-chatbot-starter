@@ -10,8 +10,8 @@ Playwright Testing Plan for Admin Settings Implementation
     1. Login Page Testing
       - Navigate to localhost:3000/login
       - Fill in login form with super admin credentials:
-          - Email: chemecosmetics.dev@gmail.com
-        - Password: SuperAdmin123!
+          - Email: [ADMIN_EMAIL]
+        - Password: [ADMIN_PASSWORD]
       - Verify successful login and redirect to dashboard
     2. Dashboard Navigation
       - Verify dashboard loads correctly after login

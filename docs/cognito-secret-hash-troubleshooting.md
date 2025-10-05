@@ -197,7 +197,7 @@ For Next.js applications using AWS Amplify, **prefer app clients without client 
 # Test login endpoint
 curl -X POST http://localhost:3000/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"chemecosmetics.dev@gmail.com","password":"SuperAdmin123!"}'
+  -d '{"email":"[ADMIN_EMAIL]","password":"[ADMIN_PASSWORD]"}'
 
 # Expected: Success response with user data, no SECRET_HASH error
 ```
