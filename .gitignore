@@ -54,3 +54,7 @@ DEPLOYMENT.md
 .playwright-mcp/
 test_*.js
 create_*.mjs
+
+# User uploads and sensitive content
+uploads/
+docs/Screenshot*

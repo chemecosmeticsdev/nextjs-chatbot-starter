@@ -115,43 +115,47 @@ const routes: RouteConfigItem[] = [
     ],
   },
 
+  // Documents Management
+  {
+    path: '/dashboard/documents',
+    title: 'Documents',
+    icon: 'FileText',
+    parent: '/dashboard',
+    children: [
+      {
+        path: '/dashboard/documents/upload',
+        title: 'Upload Documents',
+        icon: 'Upload',
+        parent: '/dashboard/documents',
+      },
+      {
+        path: '/dashboard/documents/[id]',
+        title: 'Document Details',
+        icon: 'FileText',
+        parent: '/dashboard/documents',
+        dynamic: true,
+      },
+    ],
+  },
+
   // Knowledge Base
   {
-    path: '/dashboard/knowledge',
+    path: '/dashboard/knowledge-base',
     title: 'Knowledge Base',
     icon: 'Database',
     parent: '/dashboard',
     children: [
       {
-        path: '/dashboard/knowledge/documents',
-        title: 'Documents',
-        icon: 'FileText',
-        parent: '/dashboard/knowledge',
-      },
-      {
-        path: '/dashboard/knowledge/documents/upload',
-        title: 'Upload Documents',
-        icon: 'Upload',
-        parent: '/dashboard/knowledge/documents',
-      },
-      {
-        path: '/dashboard/knowledge/documents/[id]',
-        title: 'Document Details',
-        icon: 'FileText',
-        parent: '/dashboard/knowledge/documents',
-        dynamic: true,
-      },
-      {
-        path: '/dashboard/knowledge/search',
+        path: '/dashboard/knowledge-base/search',
         title: 'Search Knowledge',
         icon: 'Search',
-        parent: '/dashboard/knowledge',
+        parent: '/dashboard/knowledge-base',
       },
       {
-        path: '/dashboard/knowledge/categories',
+        path: '/dashboard/knowledge-base/categories',
         title: 'Categories',
         icon: 'Filter',
-        parent: '/dashboard/knowledge',
+        parent: '/dashboard/knowledge-base',
       },
     ],
   },
