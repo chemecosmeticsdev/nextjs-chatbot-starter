@@ -244,3 +244,14 @@ export function allowBothAuth(options: ApiAuthOptions = {}): ApiAuthOptions {
     requireApiKey: false,
   };
 }
+
+/**
+ * Simple authentication function for API routes
+ * Compatible with existing usage patterns
+ */
+export async function requireAuth(
+  request: NextRequest,
+  options: ApiAuthOptions = {}
+): Promise<AuthResult> {
+  return authenticateRequest(request, options);
+}

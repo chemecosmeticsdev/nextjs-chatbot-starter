@@ -296,3 +296,55 @@ export function chatSanitization() {
     logViolations: true,
   });
 }
+
+/**
+ * Simple input sanitization function for API routes
+ * Removes potentially dangerous content from input objects
+ */
+export function sanitizeInput(input: any): any {
+  if (input === null || input === undefined) {
+    return input;
+  }
+
+  if (typeof input === 'string') {
+    return sanitizeString(input);
+  }
+
+  if (Array.isArray(input)) {
+    return input.map(item => sanitizeInput(item));
+  }
+
+  if (typeof input === 'object') {
+    const sanitized: any = {};
+    for (const [key, value] of Object.entries(input)) {
+      // Sanitize both key and value
+      const sanitizedKey = sanitizeString(key);
+      sanitized[sanitizedKey] = sanitizeInput(value);
+    }
+    return sanitized;
+  }
+
+  return input;
+}
+
+/**
+ * Sanitize string content
+ */
+function sanitizeString(str: string): string {
+  if (typeof str !== 'string') return str;
+
+  return str
+    // Remove null bytes
+    .replace(/\x00/g, '')
+    // Remove potential script tags
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    // Remove javascript: and vbscript: protocols
+    .replace(/javascript:/gi, '')
+    .replace(/vbscript:/gi, '')
+    // Remove event handlers
+    .replace(/\son\w+\s*=/gi, '')
+    // Limit string length to prevent DoS
+    .substring(0, 10000)
+    // Trim whitespace
+    .trim();
+}

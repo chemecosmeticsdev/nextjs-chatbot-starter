@@ -1222,3 +1222,6 @@ export type NewDeveloperPortalUser = typeof developerPortalUsers.$inferInsert;
 // Widget Analytics types
 export type WidgetAnalyticsEvent = typeof widgetAnalyticsEvents.$inferSelect;
 export type NewWidgetAnalyticsEvent = typeof widgetAnalyticsEvents.$inferInsert;
+
+// Compatibility alias for legacy imports
+export const chatbots = chatbotInstances;
