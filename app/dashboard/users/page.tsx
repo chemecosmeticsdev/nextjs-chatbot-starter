@@ -63,10 +63,22 @@ export default function UsersPage() {
   const router = useRouter()
   const [user, setUser] = React.useState<User | null>(null)
   const [loading, setLoading] = React.useState(true)
+  const [users, setUsers] = React.useState<UserData[]>([])
+  const [usersLoading, setUsersLoading] = React.useState(false)
+  const [searchTerm, setSearchTerm] = React.useState('')
+  const [roleFilter, setRoleFilter] = React.useState('')
+  const [statusFilter, setStatusFilter] = React.useState('')
+  const [error, setError] = React.useState<string | null>(null)
 
   React.useEffect(() => {
     checkAuth()
   }, [])
+
+  React.useEffect(() => {
+    if (user) {
+      fetchUsers()
+    }
+  }, [user])
 
   const checkAuth = async () => {
     try {
@@ -86,6 +98,41 @@ export default function UsersPage() {
     }
   }
 
+  const fetchUsers = async () => {
+    setUsersLoading(true)
+    setError(null)
+
+    try {
+      const params = new URLSearchParams({
+        limit: '50',
+        offset: '0',
+        includeInactive: 'true'
+      })
+
+      if (searchTerm) params.append('search', searchTerm)
+      if (roleFilter) params.append('role', roleFilter)
+
+      const response = await fetch(`/api/v1/admin/users?${params}`)
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        setUsers(data.data.users)
+      } else {
+        setError(data.error || 'Failed to fetch users')
+        console.error('Failed to fetch users:', data.error)
+      }
+    } catch (error) {
+      setError('Failed to fetch users')
+      console.error('Error fetching users:', error)
+    } finally {
+      setUsersLoading(false)
+    }
+  }
+
+  const handleSearch = () => {
+    fetchUsers()
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -98,59 +145,13 @@ export default function UsersPage() {
     return null
   }
 
-  // Placeholder users data
-  const users: UserData[] = [
-    {
-      id: '1',
-      email: 'chemecosmetics.dev@gmail.com',
-      full_name: 'Super Admin',
-      role: 'super_admin',
-      status: 'active',
-      created_at: '2024-01-01 00:00:00',
-      last_login: '2024-01-25 10:30:45',
-      department: 'Engineering'
-    },
-    {
-      id: '2',
-      email: 'admin@company.com',
-      full_name: 'John Admin',
-      role: 'admin',
-      status: 'active',
-      created_at: '2024-01-02 09:15:22',
-      last_login: '2024-01-24 16:45:10',
-      department: 'Operations'
-    },
-    {
-      id: '3',
-      email: 'jane.doe@company.com',
-      full_name: 'Jane Doe',
-      role: 'user',
-      status: 'active',
-      created_at: '2024-01-10 14:30:18',
-      last_login: '2024-01-25 09:22:35',
-      department: 'Marketing'
-    },
-    {
-      id: '4',
-      email: 'mike.smith@company.com',
-      full_name: 'Mike Smith',
-      role: 'user',
-      status: 'inactive',
-      created_at: '2024-01-15 11:20:44',
-      last_login: '2024-01-20 13:15:25',
-      department: 'Sales'
-    },
-    {
-      id: '5',
-      email: 'sarah.wilson@company.com',
-      full_name: 'Sarah Wilson',
-      role: 'user',
-      status: 'suspended',
-      created_at: '2024-01-12 16:45:33',
-      last_login: '2024-01-18 08:30:12',
-      department: 'Support'
+  // Filter users client-side based on status filter
+  const filteredUsers = users.filter(userData => {
+    if (statusFilter && userData.status !== statusFilter) {
+      return false
     }
-  ]
+    return true
+  })
 
   const getRoleBadge = (role: string) => {
     switch (role) {
@@ -281,23 +282,34 @@ export default function UsersPage() {
               <Input
                 placeholder="Search by name, email, or department..."
                 className="w-full"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               />
             </div>
-            <select className="flex h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50">
+            <select
+              className="flex h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+            >
               <option value="">All Roles</option>
               <option value="super_admin">Super Admin</option>
               <option value="admin">Admin</option>
               <option value="user">User</option>
             </select>
-            <select className="flex h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50">
+            <select
+              className="flex h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
               <option value="">All Status</option>
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
               <option value="suspended">Suspended</option>
             </select>
-            <Button>
+            <Button onClick={handleSearch} disabled={usersLoading}>
               <Search className="mr-2 h-4 w-4" />
-              Search
+              {usersLoading ? 'Searching...' : 'Search'}
             </Button>
           </div>
         </CardContent>
@@ -312,8 +324,39 @@ export default function UsersPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {users.map((userData) => (
+          {error && (
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
+              <p className="text-red-600 text-sm">{error}</p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-2"
+                onClick={fetchUsers}
+                disabled={usersLoading}
+              >
+                Try Again
+              </Button>
+            </div>
+          )}
+
+          {usersLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <span className="ml-2 text-muted-foreground">Loading users...</span>
+            </div>
+          ) : filteredUsers.length === 0 ? (
+            <div className="text-center py-8">
+              <Users className="mx-auto h-12 w-12 text-muted-foreground/50" />
+              <h3 className="mt-2 text-sm font-medium text-muted-foreground">No users found</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {searchTerm || roleFilter || statusFilter
+                  ? 'Try adjusting your search criteria.'
+                  : 'No users have been registered yet.'}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredUsers.map((userData) => (
               <div key={userData.id} className="flex items-center justify-between p-4 border rounded-lg">
                 <div className="flex items-center space-x-4">
                   <Avatar className="h-10 w-10">
@@ -331,8 +374,8 @@ export default function UsersPage() {
                       {userData.department && (
                         <span>Department: {userData.department}</span>
                       )}
-                      <span>Joined: {userData.created_at.split(' ')[0]}</span>
-                      <span>Last login: {userData.last_login.split(' ')[0]}</span>
+                      <span>Joined: {new Date(userData.created_at).toLocaleDateString()}</span>
+                      <span>Last login: {userData.last_login === 'Never' ? 'Never' : new Date(userData.last_login).toLocaleDateString()}</span>
                     </div>
                   </div>
                 </div>
@@ -370,14 +413,21 @@ export default function UsersPage() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
-          <div className="flex justify-center mt-6">
-            <Button variant="outline">
-              Load More Users
-            </Button>
-          </div>
+          {!usersLoading && !error && filteredUsers.length > 0 && (
+            <div className="flex justify-center mt-6">
+              <Button
+                variant="outline"
+                onClick={fetchUsers}
+                disabled={usersLoading}
+              >
+                Refresh Users
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 

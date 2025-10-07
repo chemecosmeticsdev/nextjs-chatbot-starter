@@ -48,7 +48,27 @@ export const knowledgeBaseUpdateSchema = z.object({
     supplier: z.string().optional(),
     tags: z.array(z.string()).optional(),
     priority: z.enum(['low', 'medium', 'high']).optional()
-  }).optional()
+  }).optional(),
+  // Structured metadata fields
+  supplierName: z.string().max(255).nullish(),
+  supplierNormalized: z.string().max(255).nullish(),
+  supplierCountry: z.string().max(100).nullish(),
+  ingredientName: z.string().max(255).nullish(),
+  ingredientNormalized: z.string().max(255).nullish(),
+  ingredientInciName: z.string().max(255).nullish(),
+  ingredientCasNumber: z.string().max(50).nullish(),
+  ragDocumentType: z.string().nullish(),
+  documentSubtype: z.string().max(100).nullish(),
+  complianceTypes: z.array(z.string()).nullish(),
+  certificationBodies: z.array(z.string()).nullish(),
+  regulatoryRegions: z.array(z.string()).nullish(),
+  keywords: z.array(z.string()).nullish(),
+  casNumbers: z.array(z.string()).nullish(),
+  inciNames: z.array(z.string()).nullish(),
+  allergens: z.array(z.string()).nullish(),
+  qualityScore: z.number().int().min(0).max(100).nullish(),
+  validationStatus: z.string().nullish(),
+  language: z.string().max(10).nullish()
 }).strict();
 
 export type KnowledgeBaseUpdateRequest = z.infer<typeof knowledgeBaseUpdateSchema>;
@@ -112,7 +132,7 @@ export type BulkProcessingRequest = z.infer<typeof bulkProcessingSchema>;
  */
 export const searchAnalyticsSchema = z.object({
   timeframe: z.enum(['1h', '24h', '7d', '30d', '90d']).optional().default('24h'),
-  chatbotId: z.string().uuid('Invalid chatbot ID format').optional(),
+  chatbotId: z.string().uuid('Invalid chatbot ID format').optional().nullish(),
   includeFailedQueries: z.boolean().optional().default(false),
   groupBy: z.enum(['hour', 'day', 'query_type']).optional().default('day')
 }).strict();

@@ -57,6 +57,7 @@ export function WebSocketProvider({
   // Initialize WebSocket client when user is authenticated
   useEffect(() => {
     if (user && token && !client) {
+      console.log('Creating WebSocket client for user:', user.id);
       const newClient = createWebSocketClient(token, {
         onOpen: () => {
           console.log('WebSocket connected');
@@ -126,7 +127,7 @@ export function WebSocketProvider({
             });
           }
         }
-      });
+      }, user.id);
 
       setClient(newClient);
 
@@ -137,7 +138,11 @@ export function WebSocketProvider({
 
     return () => {
       if (client) {
+        console.log('Cleaning up WebSocket client');
         client.disconnect();
+        setClient(null);
+        setConnectionId(null);
+        setConnectionState(WebSocketConnectionState.DISCONNECTED);
       }
     };
   }, [user, token, autoConnect, enableNotifications]);

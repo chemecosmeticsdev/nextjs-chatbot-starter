@@ -62,6 +62,14 @@ export async function GET(
     // Get chatbot from database
     const chatbot = await ChatbotService.getChatbotById(validatedParams.id);
 
+    // Debug logging
+    console.log('DEBUG - Chatbot retrieved:', {
+      id: chatbot?.id,
+      hasConfiguration: !!chatbot?.configuration,
+      configType: typeof chatbot?.configuration,
+      configValue: chatbot?.configuration
+    });
+
     if (!chatbot) {
       return NextResponse.json(
         createErrorResponse('Chatbot not found', 'NOT_FOUND'),

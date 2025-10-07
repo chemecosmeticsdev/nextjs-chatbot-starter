@@ -36,6 +36,9 @@ export async function GET(request: NextRequest) {
     // Update last activity
     await UserSyncService.updateUserActivity(dbUser.id);
 
+    // Create a WebSocket authentication token
+    const wsToken = await AuthTokenService.createSession(dbUser);
+
     return NextResponse.json({
       success: true,
       user: {
@@ -47,6 +50,7 @@ export async function GET(request: NextRequest) {
         created_at: dbUser.created_at,
         last_login_at: dbUser.last_login_at,
       },
+      token: wsToken,
     });
 
   } catch (error: any) {

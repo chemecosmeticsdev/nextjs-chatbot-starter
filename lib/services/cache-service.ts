@@ -5,23 +5,43 @@ import { Redis } from '@upstash/redis';
  * Provides high-performance caching with graceful degradation
  */
 export class CacheService {
-  private redis: Redis;
+  private redis: Redis | null = null;
   private defaultTTL = 300; // 5 minutes
-  private isHealthy = true;
+  private isHealthy = false;
   private lastHealthCheck = 0;
   private healthCheckInterval = 30000; // 30 seconds
+  private isConfigured = false;
 
   constructor() {
-    this.redis = new Redis({
-      url: process.env.UPSTASH_REDIS_URL!,
-      token: process.env.UPSTASH_REDIS_TOKEN!,
-      // Optimize for serverless
-      automaticDeserialization: false,
-      retry: {
-        retries: 3,
-        retryDelay: (attempt) => Math.min(attempt * 50, 500)
+    // Check if Redis credentials are configured
+    const redisUrl = process.env.UPSTASH_REDIS_URL;
+    const redisToken = process.env.UPSTASH_REDIS_TOKEN;
+
+    if (redisUrl && redisToken) {
+      try {
+        this.redis = new Redis({
+          url: redisUrl,
+          token: redisToken,
+          // Optimize for serverless
+          automaticDeserialization: false,
+          retry: {
+            retries: 3,
+            retryDelay: (attempt) => Math.min(attempt * 50, 500)
+          }
+        });
+        this.isConfigured = true;
+        this.isHealthy = true;
+        console.log('[CacheService] Upstash Redis configured successfully');
+      } catch (error) {
+        console.warn('[CacheService] Failed to initialize Redis:', error);
+        this.isConfigured = false;
+        this.isHealthy = false;
       }
-    });
+    } else {
+      console.warn('[CacheService] Upstash Redis credentials not configured - cache will be disabled');
+      this.isConfigured = false;
+      this.isHealthy = false;
+    }
   }
 
   /**
@@ -29,6 +49,10 @@ export class CacheService {
    */
   async get<T>(key: string): Promise<T | null> {
     try {
+      if (!this.isConfigured || !this.redis) {
+        return null; // Graceful degradation
+      }
+
       await this.checkHealth();
 
       if (!this.isHealthy) {
@@ -69,6 +93,10 @@ export class CacheService {
     expirationSeconds?: number
   ): Promise<void> {
     try {
+      if (!this.isConfigured || !this.redis) {
+        return; // Graceful degradation
+      }
+
       await this.checkHealth();
 
       if (!this.isHealthy) {
@@ -278,6 +306,11 @@ export class CacheService {
    * Check if cache is healthy
    */
   private async checkHealth(): Promise<void> {
+    if (!this.isConfigured || !this.redis) {
+      this.isHealthy = false;
+      return;
+    }
+
     const now = Date.now();
 
     // Skip health check if recently performed
@@ -310,22 +343,25 @@ export class CacheService {
    */
   async getStats(): Promise<{
     healthy: boolean;
+    configured: boolean;
     lastHealthCheck: Date;
     info?: any;
   }> {
     try {
-      const info = this.isHealthy ? await this.redis.info() : null;
+      const info = this.isHealthy && this.redis ? await this.redis.info() : null;
 
       return {
         healthy: this.isHealthy,
+        configured: this.isConfigured,
         lastHealthCheck: new Date(this.lastHealthCheck),
-        info
+        info: info || (this.isConfigured ? null : { message: 'Redis credentials not configured' })
       };
     } catch (error) {
       return {
         healthy: false,
+        configured: this.isConfigured,
         lastHealthCheck: new Date(this.lastHealthCheck),
-        info: { error: error.message }
+        info: { error: error instanceof Error ? error.message : 'Unknown error' }
       };
     }
   }

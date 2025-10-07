@@ -1,4 +1,4 @@
-import { SQSClient, SendMessageCommand, DeleteMessageCommand, ReceiveMessageCommand } from '@aws-sdk/client-sqs';
+import { SQSClient, SendMessageCommand, DeleteMessageCommand, ReceiveMessageCommand, GetQueueAttributesCommand } from '@aws-sdk/client-sqs';
 import { cache, CacheKeys } from './cache-service';
 
 // Job types supported by the queue system
@@ -7,6 +7,19 @@ export enum JobType {
   AI_RESPONSE_GENERATION = 'ai_response_generation',
   DOCUMENT_PROCESSING = 'document_processing',
   VECTOR_INDEXING = 'vector_indexing',
+
+  // Enhanced Document Processing Pipeline
+  DOCUMENT_DOWNLOAD = 'document_download',
+  TEXT_EXTRACTION = 'text_extraction',
+  METADATA_ENHANCEMENT = 'metadata_enhancement',
+  DOCUMENT_CHUNKING = 'document_chunking',
+  EMBEDDING_GENERATION = 'embedding_generation',
+  VECTOR_STORAGE = 'vector_storage',
+  COMPLETE_DOCUMENT_PIPELINE = 'complete_document_pipeline',
+
+  // Google Drive Integration
+  GDRIVE_FOLDER_PROCESSING = 'gdrive_folder_processing',
+  GDRIVE_FILE_PROCESSING = 'gdrive_file_processing',
 
   // Analytics Jobs
   CONVERSATION_ANALYTICS = 'conversation_analytics',
@@ -19,9 +32,13 @@ export enum JobType {
   CACHE_WARM_UP = 'cache_warm_up',
 
   // Document Management
-  DOCUMENT_CHUNKING = 'document_chunking',
   KNOWLEDGE_BASE_UPDATE = 'knowledge_base_update',
-  SEARCH_INDEX_UPDATE = 'search_index_update'
+  SEARCH_INDEX_UPDATE = 'search_index_update',
+
+  // Maintenance & Health
+  DOCUMENT_REPROCESSING = 'document_reprocessing',
+  VECTOR_REINDEXING = 'vector_reindexing',
+  QUALITY_ASSURANCE = 'quality_assurance'
 }
 
 // Job priority levels
@@ -264,7 +281,9 @@ export class JobQueueService {
     jobId: string,
     progress: number,
     status: 'processing' | 'completed' | 'failed',
-    error?: string
+    error?: string,
+    stage?: string,
+    stageDetails?: Record<string, any>
   ): Promise<void> {
     try {
       const cacheKey = CacheKeys.apiResponse('job_status', jobId);
@@ -275,15 +294,139 @@ export class JobQueueService {
         status,
         progress,
         ...(error && { error }),
-        updatedAt: new Date().toISOString()
+        ...(stage && { currentStage: stage }),
+        ...(stageDetails && { stageDetails }),
+        updatedAt: new Date().toISOString(),
+        lastProgressUpdate: new Date().toISOString()
       };
 
       // Cache for 24 hours for completed/failed jobs, 1 hour for processing
       const ttl = status === 'processing' ? 3600 : 86400;
       await cache.set(cacheKey, updatedStatus, ttl);
 
+      console.log(`[JobQueue] Updated progress for ${jobId}: ${progress}% (${status}) ${stage ? `- ${stage}` : ''}`);
+
     } catch (error) {
       console.error(`Failed to update job progress for ${jobId}:`, error);
+    }
+  }
+
+  /**
+   * Update document processing stage progress
+   */
+  async updateDocumentStage(
+    documentId: string,
+    stage: 'text_extraction' | 'metadata_enhancement' | 'document_chunking' | 'embedding_generation' | 'vector_storage',
+    progress: number,
+    status: 'starting' | 'processing' | 'completed' | 'failed',
+    details?: Record<string, any>
+  ): Promise<void> {
+    try {
+      const cacheKey = CacheKeys.apiResponse('document_stage', documentId);
+      const currentStages = await cache.get(cacheKey) || {};
+
+      const updatedStages = {
+        ...currentStages,
+        [stage]: {
+          status,
+          progress,
+          details: details || {},
+          updatedAt: new Date().toISOString()
+        },
+        lastUpdate: new Date().toISOString()
+      };
+
+      // Cache for 6 hours
+      await cache.set(cacheKey, updatedStages, 21600);
+
+      console.log(`[DocumentStages] ${documentId} - ${stage}: ${progress}% (${status})`);
+
+    } catch (error) {
+      console.error(`Failed to update document stage for ${documentId}:`, error);
+    }
+  }
+
+  /**
+   * Get document processing stages
+   */
+  async getDocumentStages(documentId: string): Promise<Record<string, any> | null> {
+    try {
+      const cacheKey = CacheKeys.apiResponse('document_stage', documentId);
+      return await cache.get(cacheKey);
+    } catch (error) {
+      console.error(`Failed to get document stages for ${documentId}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Update batch job progress with individual document status
+   */
+  async updateBatchJobProgress(
+    batchJobId: string,
+    documentResults: Array<{
+      documentId: string;
+      status: 'completed' | 'failed' | 'processing';
+      progress?: number;
+      error?: string;
+    }>
+  ): Promise<void> {
+    try {
+      const cacheKey = CacheKeys.apiResponse('batch_job', batchJobId);
+
+      const totalDocuments = documentResults.length;
+      const completedCount = documentResults.filter(d => d.status === 'completed').length;
+      const failedCount = documentResults.filter(d => d.status === 'failed').length;
+      const processingCount = documentResults.filter(d => d.status === 'processing').length;
+
+      // Calculate overall progress
+      const overallProgress = Math.round((completedCount / totalDocuments) * 100);
+
+      // Determine batch status
+      let batchStatus: 'processing' | 'completed' | 'failed';
+      if (completedCount === totalDocuments) {
+        batchStatus = 'completed';
+      } else if (failedCount === totalDocuments) {
+        batchStatus = 'failed';
+      } else {
+        batchStatus = 'processing';
+      }
+
+      const batchUpdate = {
+        jobId: batchJobId,
+        status: batchStatus,
+        progress: overallProgress,
+        summary: {
+          total: totalDocuments,
+          completed: completedCount,
+          failed: failedCount,
+          processing: processingCount
+        },
+        documents: documentResults,
+        updatedAt: new Date().toISOString()
+      };
+
+      // Cache for 24 hours if completed, 1 hour if processing
+      const ttl = batchStatus === 'completed' ? 86400 : 3600;
+      await cache.set(cacheKey, batchUpdate, ttl);
+
+      console.log(`[BatchJob] ${batchJobId}: ${completedCount}/${totalDocuments} completed (${overallProgress}%)`);
+
+    } catch (error) {
+      console.error(`Failed to update batch job progress for ${batchJobId}:`, error);
+    }
+  }
+
+  /**
+   * Get batch job status
+   */
+  async getBatchJobStatus(batchJobId: string): Promise<any> {
+    try {
+      const cacheKey = CacheKeys.apiResponse('batch_job', batchJobId);
+      return await cache.get(cacheKey);
+    } catch (error) {
+      console.error(`Failed to get batch job status for ${batchJobId}:`, error);
+      return null;
     }
   }
 
@@ -317,19 +460,38 @@ export class JobQueueService {
 
     for (const [priority, config] of Object.entries(QueueConfigs)) {
       try {
-        // Note: In production, you'd use GetQueueAttributes to get real stats
-        // For now, we'll provide placeholder values
+        const client = this.sqsClients.get(priority as JobPriority)!;
+
+        const command = new GetQueueAttributesCommand({
+          QueueUrl: config.queueUrl,
+          AttributeNames: [
+            'ApproximateNumberOfMessages',
+            'ApproximateNumberOfMessagesNotVisible',
+            'ApproximateNumberOfMessagesDelayed'
+          ]
+        });
+
+        const response = await client.send(command);
+        const attributes = response.Attributes || {};
+
         stats[priority] = {
-          approximateMessageCount: 0,
-          approximateMessageNotVisible: 0,
+          approximateMessageCount: parseInt(attributes.ApproximateNumberOfMessages || '0', 10),
+          approximateMessageNotVisible: parseInt(attributes.ApproximateNumberOfMessagesNotVisible || '0', 10),
           healthy: this.isHealthy
         };
+
+        console.log(`Queue stats for ${priority}: visible=${stats[priority].approximateMessageCount}, processing=${stats[priority].approximateMessageNotVisible}`);
+
       } catch (error) {
+        console.error(`Failed to get queue stats for ${priority}:`, error);
         stats[priority] = {
           approximateMessageCount: -1,
           approximateMessageNotVisible: -1,
           healthy: false
         };
+
+        // Mark service as unhealthy if we can't get stats
+        this.markUnhealthy();
       }
     }
 
@@ -432,15 +594,38 @@ export class JobQueueService {
       [JobType.AI_RESPONSE_GENERATION]: 60,
       [JobType.DOCUMENT_PROCESSING]: 300,
       [JobType.VECTOR_INDEXING]: 600,
+
+      // Enhanced Document Processing Pipeline
+      [JobType.DOCUMENT_DOWNLOAD]: 180,
+      [JobType.TEXT_EXTRACTION]: 600,
+      [JobType.METADATA_ENHANCEMENT]: 300,
+      [JobType.DOCUMENT_CHUNKING]: 180,
+      [JobType.EMBEDDING_GENERATION]: 900,
+      [JobType.VECTOR_STORAGE]: 300,
+      [JobType.COMPLETE_DOCUMENT_PIPELINE]: 1800,
+
+      // Google Drive Integration
+      [JobType.GDRIVE_FOLDER_PROCESSING]: 3600,
+      [JobType.GDRIVE_FILE_PROCESSING]: 600,
+
+      // Analytics Jobs
       [JobType.CONVERSATION_ANALYTICS]: 120,
       [JobType.DASHBOARD_METRICS_UPDATE]: 180,
       [JobType.USAGE_STATS_CALCULATION]: 300,
+
+      // Background Tasks
       [JobType.EMAIL_NOTIFICATION]: 30,
       [JobType.CLEANUP_OLD_DATA]: 1800,
       [JobType.CACHE_WARM_UP]: 60,
-      [JobType.DOCUMENT_CHUNKING]: 180,
+
+      // Document Management
       [JobType.KNOWLEDGE_BASE_UPDATE]: 600,
-      [JobType.SEARCH_INDEX_UPDATE]: 300
+      [JobType.SEARCH_INDEX_UPDATE]: 300,
+
+      // Maintenance & Health
+      [JobType.DOCUMENT_REPROCESSING]: 1800,
+      [JobType.VECTOR_REINDEXING]: 3600,
+      [JobType.QUALITY_ASSURANCE]: 900
     };
     return timeoutMap[jobType] || 300;
   }
@@ -505,11 +690,101 @@ export const JobFactory = {
     metadata: { userId }
   }),
 
+  // Enhanced Document Processing Pipeline
+  completeDocumentPipeline: (
+    documentId: string,
+    userId: string,
+    options: {
+      googleDriveFileId?: string;
+      fileUrl?: string;
+      skipSteps?: string[];
+      forceReprocess?: boolean;
+      priority?: JobPriority;
+    } = {}
+  ): Omit<Job, 'id'> => ({
+    type: JobType.COMPLETE_DOCUMENT_PIPELINE,
+    priority: options.priority || JobPriority.NORMAL,
+    payload: {
+      documentId,
+      userId,
+      googleDriveFileId: options.googleDriveFileId,
+      fileUrl: options.fileUrl,
+      skipSteps: options.skipSteps || [],
+      forceReprocess: options.forceReprocess || false,
+    },
+    metadata: { documentId, userId }
+  }),
+
+  textExtraction: (documentId: string, filePath: string, mimeType: string, originalFilename: string): Omit<Job, 'id'> => ({
+    type: JobType.TEXT_EXTRACTION,
+    priority: JobPriority.NORMAL,
+    payload: { documentId, filePath, mimeType, originalFilename },
+    metadata: { documentId }
+  }),
+
+  metadataEnhancement: (documentId: string, extractedText: string, folderPath?: string, filename?: string): Omit<Job, 'id'> => ({
+    type: JobType.METADATA_ENHANCEMENT,
+    priority: JobPriority.NORMAL,
+    payload: { documentId, extractedText, folderPath, filename },
+    metadata: { documentId }
+  }),
+
+  documentChunking: (documentId: string, extractedText: string, documentType: string, tokenCount: number): Omit<Job, 'id'> => ({
+    type: JobType.DOCUMENT_CHUNKING,
+    priority: JobPriority.NORMAL,
+    payload: { documentId, extractedText, documentType, tokenCount },
+    metadata: { documentId }
+  }),
+
+  embeddingGeneration: (documentId: string, chunks: any[]): Omit<Job, 'id'> => ({
+    type: JobType.EMBEDDING_GENERATION,
+    priority: JobPriority.NORMAL,
+    payload: { documentId, chunks },
+    metadata: { documentId }
+  }),
+
+  vectorStorage: (documentId: string, chunksWithEmbeddings: any[]): Omit<Job, 'id'> => ({
+    type: JobType.VECTOR_STORAGE,
+    priority: JobPriority.NORMAL,
+    payload: { documentId, chunksWithEmbeddings },
+    metadata: { documentId }
+  }),
+
+  // Google Drive Integration
+  googleDriveFolderProcessing: (folderId: string, userId: string, options: { recursive?: boolean; priority?: JobPriority } = {}): Omit<Job, 'id'> => ({
+    type: JobType.GDRIVE_FOLDER_PROCESSING,
+    priority: options.priority || JobPriority.LOW,
+    payload: { folderId, userId, recursive: options.recursive || false },
+    metadata: { userId, folderId }
+  }),
+
+  googleDriveFileProcessing: (fileId: string, documentId: string, userId: string): Omit<Job, 'id'> => ({
+    type: JobType.GDRIVE_FILE_PROCESSING,
+    priority: JobPriority.NORMAL,
+    payload: { fileId, documentId, userId },
+    metadata: { documentId, userId }
+  }),
+
+  // Analytics and Maintenance
   analyticsUpdate: (chatbotId: string, priority: JobPriority = JobPriority.LOW): Omit<Job, 'id'> => ({
     type: JobType.CONVERSATION_ANALYTICS,
     priority,
     payload: { chatbotId },
     metadata: { chatbotId }
+  }),
+
+  vectorReindexing: (documentIds: string[], priority: JobPriority = JobPriority.LOW): Omit<Job, 'id'> => ({
+    type: JobType.VECTOR_REINDEXING,
+    priority,
+    payload: { documentIds },
+    metadata: { batchSize: documentIds.length }
+  }),
+
+  qualityAssurance: (scope: string, targetIds: string[], priority: JobPriority = JobPriority.LOW): Omit<Job, 'id'> => ({
+    type: JobType.QUALITY_ASSURANCE,
+    priority,
+    payload: { scope, targetIds },
+    metadata: { scope, batchSize: targetIds.length }
   }),
 
   emailNotification: (userId: string, template: string, data: any, priority: JobPriority = JobPriority.NORMAL): Omit<Job, 'id'> => ({

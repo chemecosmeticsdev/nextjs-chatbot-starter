@@ -306,13 +306,6 @@ export class AnalyticsService {
     try {
       const { userId, limit = 50 } = options;
 
-      // For now, return empty array since the activity_logs table is causing Drizzle ORM issues
-      // This is a temporary workaround to fix the 500 error on the dashboard
-      console.log('getRecentActivity called - returning empty array (temporary fix)');
-
-      return [];
-
-      /* COMMENTED OUT UNTIL DRIZZLE ISSUE IS RESOLVED
       let whereConditions = [];
 
       // Filter by user if specified
@@ -352,11 +345,11 @@ export class AnalyticsService {
         timestamp: activity.timestamp?.toISOString(),
         userId: activity.userId,
       }));
-      */
 
     } catch (error) {
       console.error('Error getting recent activity:', error);
-      throw new Error('Failed to get recent activity');
+      // Return empty array for graceful degradation instead of throwing
+      return [];
     }
   }
 
@@ -1036,4 +1029,45 @@ export class AnalyticsService {
 
     return ((currentValue - previousValue) / previousValue) * 100;
   }
+
+  /**
+   * Track event - simplified method for basic tracking
+   */
+  static async trackEvent(eventData: {
+    userId?: string;
+    eventType: string;
+    entityType: string;
+    entityId?: string;
+    metadata?: any;
+  }): Promise<void> {
+    try {
+      await db.insert(activityLogs).values({
+        userId: eventData.userId || null,
+        activityType: eventData.eventType,
+        entityType: eventData.entityType,
+        entityId: eventData.entityId || null,
+        description: `${eventData.eventType} event tracked`,
+        metadata: eventData.metadata || {},
+        createdAt: new Date()
+      });
+    } catch (error) {
+      console.error('Error tracking event:', error);
+      // Don't throw to prevent blocking the main flow
+    }
+  }
 }
+
+// Export both the class and an instance for backwards compatibility
+export const analyticsService = {
+  trackEvent: AnalyticsService.trackEvent.bind(AnalyticsService),
+  generateAnalytics: AnalyticsService.generateAnalytics.bind(AnalyticsService),
+  generatePerformanceMetrics: AnalyticsService.generatePerformanceMetrics.bind(AnalyticsService),
+  getRecentActivity: AnalyticsService.getRecentActivity.bind(AnalyticsService),
+  trackUserActivity: AnalyticsService.trackUserActivity.bind(AnalyticsService),
+  generateSessionAnalytics: AnalyticsService.generateSessionAnalytics.bind(AnalyticsService),
+  generateDashboardMetrics: AnalyticsService.generateDashboardMetrics.bind(AnalyticsService),
+  exportAnalyticsData: AnalyticsService.exportAnalyticsData.bind(AnalyticsService)
+};
+
+// Default export for better import flexibility
+export default AnalyticsService;

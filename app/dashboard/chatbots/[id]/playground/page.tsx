@@ -47,10 +47,7 @@ import {
   WifiOff
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { LiveChatInterface } from "@/components/chat/live-chat-interface";
-import { ConnectionStatus } from "@/components/websocket/connection-status";
-import { WebSocketProvider } from "@/components/websocket/websocket-provider";
-import { useRealtimeChat } from "@/hooks/use-realtime-chat";
+import { PlaygroundChatInterface } from "@/components/chat/playground-chat-interface";
 import { useAuth } from "@/hooks/use-auth";
 
 interface ChatMessage {
@@ -165,7 +162,7 @@ function ChatbotPlaygroundPageContent() {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
       const data = await response.json();
-      setChatbot(data);
+      setChatbot(data.data);
     } catch (error) {
       console.error("Failed to fetch chatbot details:", error);
       toast({
@@ -204,7 +201,7 @@ function ChatbotPlaygroundPageContent() {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
       const session = await response.json();
-      setCurrentSessionId(session.id);
+      setCurrentSessionId(session.data.id);
       setMessages([]);
       setSessionStartTime(new Date());
       setMetrics({
@@ -255,19 +252,22 @@ function ChatbotPlaygroundPageContent() {
     }
   };
 
-  const sendMessage = async () => {
-    if (!inputMessage.trim() || isSending || !currentSessionId) return;
+  const sendMessage = async (messageContent?: string) => {
+    const content = messageContent || inputMessage.trim();
+    if (!content || isSending || !currentSessionId) return;
 
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
       role: "user",
-      content: inputMessage.trim(),
+      content: content,
       timestamp: new Date().toISOString(),
       status: "sent"
     };
 
     setMessages(prev => [...prev, userMessage]);
-    setInputMessage("");
+    if (!messageContent) {
+      setInputMessage("");
+    }
     setIsSending(true);
 
     const assistantMessage: ChatMessage = {
@@ -291,7 +291,7 @@ function ChatbotPlaygroundPageContent() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: inputMessage.trim(),
+          message: content,
           config_override: configOverride,
           include_vector_results: showVectorResults
         }),
@@ -307,14 +307,14 @@ function ChatbotPlaygroundPageContent() {
         msg.id === assistantMessage.id
           ? {
               ...msg,
-              content: data.response,
+              content: data.data.response,
               status: "sent" as const,
               metadata: {
                 responseTime,
-                tokenUsage: data.token_usage || { prompt: 0, completion: 0, total: 0 },
-                vectorSearchResults: data.vector_search_results || [],
-                model: data.model,
-                temperature: data.temperature
+                tokenUsage: data.data.token_usage || { prompt: 0, completion: 0, total: 0 },
+                vectorSearchResults: data.data.vector_search_results || [],
+                model: data.data.model,
+                temperature: data.data.temperature
               }
             }
           : msg
@@ -324,8 +324,8 @@ function ChatbotPlaygroundPageContent() {
       setMetrics(prev => {
         const newTotalMessages = prev.totalMessages + 1;
         const newAverageResponseTime = (prev.averageResponseTime * (newTotalMessages - 1) + responseTime) / newTotalMessages;
-        const newTotalTokens = prev.totalTokensUsed + (data.token_usage?.total || 0);
-        const newVectorHits = prev.vectorSearchHits + (data.vector_search_results?.length || 0);
+        const newTotalTokens = prev.totalTokensUsed + (data.data.token_usage?.total || 0);
+        const newVectorHits = prev.vectorSearchHits + (data.data.vector_search_results?.length || 0);
 
         return {
           ...prev,
@@ -419,6 +419,21 @@ function ChatbotPlaygroundPageContent() {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
+  const getModelDisplayName = (modelId: string | undefined): string => {
+    if (!modelId) return "GPT-4";
+
+    const modelMappings: Record<string, string> = {
+      "claude-3": "Claude 3.5 Sonnet",
+      "claude-3-5-sonnet": "Claude 3.5 Sonnet",
+      "claude-3-haiku": "Claude 3 Haiku",
+      "claude-3-opus": "Claude 3 Opus",
+      "gpt-4": "GPT-4",
+      "gpt-3.5-turbo": "GPT-3.5 Turbo"
+    };
+
+    return modelMappings[modelId] || modelId;
   };
 
   if (isLoading) {
@@ -602,12 +617,11 @@ function ChatbotPlaygroundPageContent() {
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="gap-1">
                     <Bot className="h-3 w-3" />
-                    {chatbot.model || "GPT-4"}
+                    {getModelDisplayName(chatbot.configuration?.model)}
                   </Badge>
                   <Badge variant={chatbot.status === "active" ? "default" : "secondary"}>
                     {chatbot.status === "active" ? "Online" : "Offline"}
                   </Badge>
-                  <ConnectionStatus compact />
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
@@ -632,25 +646,24 @@ function ChatbotPlaygroundPageContent() {
               </div>
             </Card>
 
-            {/* Live Chat Interface */}
-            <LiveChatInterface
-              chatbotId={chatbotId}
-              conversationId={currentSessionId || 'playground-session'}
-              enableTypingIndicators={true}
-              enableMessageStatus={true}
-              enableNotifications={true}
-              showConnectionStatus={false}
-              showMessageStatus={true}
-              showTypingIndicators={true}
+            {/* Playground Chat Interface */}
+            <PlaygroundChatInterface
+              messages={messages}
+              onSendMessage={async (message) => {
+                // Use the playground's HTTP-based sendMessage function
+                await sendMessage(message);
+              }}
+              isSending={isSending}
               placeholder="Type your message to test the chatbot..."
               maxHeight="600px"
               className="min-h-[600px]"
-              onMessageSent={(content) => {
-                // Update metrics when message is sent
-                setMetrics(prev => ({
-                  ...prev,
-                  totalMessages: prev.totalMessages + 1
-                }));
+              showVectorResults={showVectorResults}
+              onRetryMessage={(messageId) => {
+                // Find the failed message and retry
+                const failedMessage = messages.find(m => m.id === messageId);
+                if (failedMessage && failedMessage.role === 'user') {
+                  sendMessage(failedMessage.content);
+                }
               }}
             />
           </div>
@@ -851,11 +864,7 @@ function ChatbotPlaygroundPageContent() {
   );
 }
 
-// Main exported component with WebSocket provider
+// Main exported component (no WebSocket provider needed)
 export default function ChatbotPlaygroundPage() {
-  return (
-    <WebSocketProvider autoConnect={true} enableNotifications={true}>
-      <ChatbotPlaygroundPageContent />
-    </WebSocketProvider>
-  );
+  return <ChatbotPlaygroundPageContent />;
 }

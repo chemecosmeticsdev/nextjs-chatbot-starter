@@ -120,7 +120,7 @@ export class KnowledgeBaseService {
   }
 
   /**
-   * Generate text embedding using AWS Bedrock Titan v2 with 512 dimensions
+   * Generate text embedding using AWS Bedrock Titan v2 with 1024 dimensions
    */
   private static async generateEmbedding(text: string, model = 'amazon.titan-embed-text-v2:0'): Promise<number[]> {
     try {
@@ -135,7 +135,7 @@ export class KnowledgeBaseService {
         accept: 'application/json',
         body: new TextEncoder().encode(JSON.stringify({
           inputText: truncatedText,
-          dimensions: 512, // Use 512 dimensions for 99% accuracy with 50% storage savings
+          dimensions: 1024, // Use 1024 dimensions to match stored embeddings (AWS Titan v2 default)
           normalize: true, // Enable normalization for better cosine similarity in RAG
         })),
       });
@@ -148,8 +148,8 @@ export class KnowledgeBaseService {
       }
 
       // Validate embedding dimensions
-      if (responseBody.embedding.length !== 512) {
-        throw new Error(`Expected 512 dimensions, got ${responseBody.embedding.length}`);
+      if (responseBody.embedding.length !== 1024) {
+        throw new Error(`Expected 1024 dimensions, got ${responseBody.embedding.length}`);
       }
 
       return responseBody.embedding;
@@ -1331,6 +1331,7 @@ export class KnowledgeBaseService {
       // Use raw SQL to match actual database schema
       const queryHash = createHash('sha256').update(query + JSON.stringify(filters)).digest('hex');
 
+      // Use UPSERT to handle duplicate query hashes gracefully
       await db.execute(sql`
         INSERT INTO search_queries (
           query_hash,
@@ -1349,6 +1350,10 @@ export class KnowledgeBaseService {
           ${responseTime},
           NOW()
         )
+        ON CONFLICT (query_hash) DO UPDATE SET
+          result_count = EXCLUDED.result_count,
+          processing_time_ms = EXCLUDED.processing_time_ms,
+          created_at = NOW()
       `);
     } catch (error) {
       console.error('Error logging search query:', error);
@@ -1967,13 +1972,13 @@ export class KnowledgeBaseService {
                 chunkIndex: chunk.chunkIndex,
                 issue: 'Invalid embedding format: not an array'
               });
-            } else if (embeddingArray.length !== 512) {
+            } else if (embeddingArray.length !== 1024) {
               invalidEmbeddings++;
               issues.push({
                 chunkId: chunk.id,
                 documentName: chunk.documentName,
                 chunkIndex: chunk.chunkIndex,
-                issue: `Invalid embedding dimensions: ${embeddingArray.length} (expected 512)`
+                issue: `Invalid embedding dimensions: ${embeddingArray.length} (expected 1024)`
               });
             } else if (!embeddingArray.every(v => typeof v === 'number' && !isNaN(v))) {
               invalidEmbeddings++;

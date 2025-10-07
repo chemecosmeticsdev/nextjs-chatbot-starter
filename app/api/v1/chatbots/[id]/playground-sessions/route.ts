@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { AuthTokenService } from '@/lib/auth';
 import { createErrorResponse, createSuccessResponse } from '@/lib/api-utils';
 import { db } from '@/lib/db';
-import { chatbotPlaygroundSessions, chatbotMessages } from '@/lib/db/schema';
-import { and, eq, desc, count } from 'drizzle-orm';
+import { chatbotPlaygroundSessions, chatbotMessages, chatbotConversations } from '@/lib/db/schema';
+import { and, eq, desc, count, inArray, sql } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
 /**
@@ -41,34 +41,60 @@ export async function GET(
       .where(
         and(
           eq(chatbotPlaygroundSessions.chatbotId, chatbotId),
-          eq(chatbotPlaygroundSessions.userId, user.id)
+          eq(chatbotPlaygroundSessions.userId, user.userId)
         )
       )
       .orderBy(desc(chatbotPlaygroundSessions.createdAt))
       .limit(50);
 
-    // Get message counts for each session
+    // Get message counts for each session by finding conversations linked to sessions
     const sessionIds = sessions.map(s => s.id);
-    let messageCounts: any[] = [];
+    let messageCountMap: { [key: string]: number } = {};
 
     if (sessionIds.length > 0) {
       try {
-        const result = await db.execute(`
-          SELECT conversation_id, COUNT(*) as message_count
-          FROM chatbot_messages
-          WHERE conversation_id = ANY($1)
-          GROUP BY conversation_id
-        `, [sessionIds]);
-        messageCounts = Array.isArray(result) ? result : [];
+        // First get conversations for these sessions
+        const conversations = await db
+          .select({
+            id: chatbotConversations.id,
+            sessionId: chatbotConversations.sessionId
+          })
+          .from(chatbotConversations)
+          .where(inArray(chatbotConversations.sessionId, sessionIds));
+
+        if (conversations.length > 0) {
+          const conversationIds = conversations.map(c => c.id);
+
+          // Only query if we have conversation IDs to avoid parameter binding errors
+          if (conversationIds.length > 0) {
+            // Get message counts for these conversations
+            const messageCounts = await db
+              .select({
+                conversationId: chatbotMessages.conversationId,
+                messageCount: count(chatbotMessages.id).as('message_count')
+              })
+              .from(chatbotMessages)
+              .where(inArray(chatbotMessages.conversationId, conversationIds))
+              .groupBy(chatbotMessages.conversationId);
+
+            // Map conversation counts back to session IDs
+            const conversationToSessionMap = Object.fromEntries(
+              conversations.map(c => [c.id, c.sessionId])
+            );
+
+            messageCounts.forEach(({ conversationId, messageCount }) => {
+              const sessionId = conversationToSessionMap[conversationId];
+              if (sessionId) {
+                messageCountMap[sessionId] = (messageCountMap[sessionId] || 0) + Number(messageCount);
+              }
+            });
+          }
+        }
       } catch (error) {
         console.error('Error fetching message counts:', error);
-        messageCounts = [];
+        messageCountMap = {};
       }
     }
-
-    const messageCountMap = Object.fromEntries(
-      messageCounts.map((row: any) => [row.conversation_id, parseInt(row.message_count)])
-    );
 
     // Format sessions with additional data
     const formattedSessions = sessions.map(session => {
@@ -140,7 +166,7 @@ export async function POST(
       .values({
         id: sessionId,
         chatbotId: chatbotId,
-        userId: user.id,
+        userId: user.userId,
         sessionConfig: requestData.config_override || {},
         isActive: true,
         createdAt: new Date(),
@@ -155,7 +181,7 @@ export async function POST(
 
     // Log session creation
     console.log(
-      `Playground session created - ID: ${sessionId}, User: ${user.id}, ` +
+      `Playground session created - ID: ${sessionId}, User: ${user.userId}, ` +
       `Chatbot: ${chatbotId}`
     );
 

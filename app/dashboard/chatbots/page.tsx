@@ -881,49 +881,119 @@ export default function ChatbotsPage() {
                   aria-labelledby={`chatbot-title-${bot.id}`}
                   aria-describedby={`chatbot-description-${bot.id} chatbot-stats-${bot.id}`}
                 >
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Checkbox
-                          checked={selectedChatbots.has(bot.id)}
-                          onCheckedChange={(checked) => handleSelectChatbot(bot.id, checked as boolean)}
-                          aria-label={`Select chatbot ${bot.name}`}
-                        />
-                        <div>
-                          <CardTitle
-                            className="flex items-center gap-2"
-                            id={`chatbot-title-${bot.id}`}
-                          >
-                            <Bot className="h-5 w-5" aria-hidden="true" />
-                            {bot.name}
-                          </CardTitle>
-                          <CardDescription
-                            className="mt-1"
-                            id={`chatbot-description-${bot.id}`}
-                          >
-                            {bot.description}
-                          </CardDescription>
+                  <CardHeader className="relative overflow-hidden">
+                    <div className="flex flex-col gap-3 sm:gap-2">
+                      {/* Primary row - Title and essential actions */}
+                      <div className="flex items-start justify-between gap-2">
+                        {/* Left side - constrained width */}
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <Checkbox
+                            checked={selectedChatbots.has(bot.id)}
+                            onCheckedChange={(checked) => handleSelectChatbot(bot.id, checked as boolean)}
+                            aria-label={`Select chatbot ${bot.name}`}
+                            className="flex-shrink-0"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <CardTitle
+                              className="flex items-center gap-2 text-base truncate"
+                              id={`chatbot-title-${bot.id}`}
+                            >
+                              <Bot className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
+                              <span className="truncate">{bot.name}</span>
+                            </CardTitle>
+                            <CardDescription
+                              className="mt-1 line-clamp-2 text-sm"
+                              id={`chatbot-description-${bot.id}`}
+                            >
+                              {bot.description}
+                            </CardDescription>
+                          </div>
+                        </div>
+
+                        {/* Right side - fixed width actions */}
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          {getStatusBadge(bot.status)}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 flex-shrink-0"
+                                aria-label={`More actions for ${bot.name}`}
+                                aria-haspopup="menu"
+                              >
+                                <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48" aria-label={`Actions for ${bot.name}`}>
+                              <DropdownMenuItem onClick={() => router.push(`/dashboard/chatbots/${bot.id}/prompt`)}>
+                                <FileText className="mr-2 h-4 w-4" />
+                                Manage Prompts
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => router.push(`/dashboard/chatbots/${bot.id}/playground`)}>
+                                <PlayCircle className="mr-2 h-4 w-4" />
+                                Playground
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => router.push(`/dashboard/chatbots/${bot.id}/configure`)}>
+                                <Settings2 className="mr-2 h-4 w-4" />
+                                Configure
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => router.push(`/dashboard/chatbots/${bot.id}/integrations`)}>
+                                <Link2 className="mr-2 h-4 w-4" />
+                                Setup Integrations
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => toggleStatus(bot.id, bot.status)}>
+                                {bot.status === 'active' ? (
+                                  <>
+                                    <Pause className="mr-2 h-4 w-4" />
+                                    Deactivate
+                                  </>
+                                ) : (
+                                  <>
+                                    <Play className="mr-2 h-4 w-4" />
+                                    Activate
+                                  </>
+                                )}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => router.push(`/dashboard/analytics?chatbot=${bot.id}`)}>
+                                <BarChart3 className="mr-2 h-4 w-4" />
+                                View Analytics
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem className="text-destructive">
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        {getStatusBadge(bot.status)}
+
+                      {/* Secondary row for integration indicators (responsive) */}
+                      <div className="flex items-center justify-between gap-2 pt-1">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <span className="text-sm text-muted-foreground truncate">
+                            Model: {bot.configuration.model}
+                          </span>
+                        </div>
 
                         {/* Integration Status Indicators */}
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1 flex-shrink-0">
                               {getIntegrationStatus(bot.id).map((integration, index) => {
                                 const IconComponent = integration.icon;
                                 return (
                                   <div
                                     key={integration.type}
-                                    className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                                    className={`w-4 h-4 rounded-full flex items-center justify-center ${
                                       integration.status === 'active'
                                         ? 'bg-green-100 text-green-600'
                                         : 'bg-gray-100 text-gray-400'
                                     }`}
                                   >
-                                    <IconComponent className="w-3 h-3" />
+                                    <IconComponent className="w-2.5 h-2.5" />
                                   </div>
                                 );
                               })}
@@ -950,67 +1020,11 @@ export default function ChatbotsPage() {
                             </div>
                           </TooltipContent>
                         </Tooltip>
-
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              aria-label={`More actions for ${bot.name}`}
-                              aria-haspopup="menu"
-                            >
-                              <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" aria-label={`Actions for ${bot.name}`}>
-                            <DropdownMenuItem onClick={() => router.push(`/dashboard/chatbots/${bot.id}/prompt`)}>
-                              <FileText className="mr-2 h-4 w-4" />
-                              Manage Prompts
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => router.push(`/dashboard/chatbots/${bot.id}/playground`)}>
-                              <PlayCircle className="mr-2 h-4 w-4" />
-                              Playground
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => router.push(`/dashboard/chatbots/${bot.id}/configure`)}>
-                              <Settings2 className="mr-2 h-4 w-4" />
-                              Configure
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => router.push(`/dashboard/chatbots/${bot.id}/integrations`)}>
-                              <Link2 className="mr-2 h-4 w-4" />
-                              Setup Integrations
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => toggleStatus(bot.id, bot.status)}>
-                              {bot.status === 'active' ? (
-                                <>
-                                  <Pause className="mr-2 h-4 w-4" />
-                                  Deactivate
-                                </>
-                              ) : (
-                                <>
-                                  <Play className="mr-2 h-4 w-4" />
-                                  Activate
-                                </>
-                              )}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => router.push(`/dashboard/analytics?chatbot=${bot.id}`)}>
-                              <BarChart3 className="mr-2 h-4 w-4" />
-                              View Analytics
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive">
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
                       </div>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="flex items-center text-sm text-muted-foreground">
-                      <span>Model: {bot.configuration.model}</span>
-                      <span className="mx-2" aria-hidden="true">•</span>
                       <span>Created {formatCreatedDate(bot.createdAt)}</span>
                     </div>
 

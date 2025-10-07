@@ -31,7 +31,7 @@ export class WebSocketAuthMiddleware {
       }
 
       // Verify the JWT token
-      const user = await AuthTokenService.verifyTokenString(token);
+      const user = await AuthTokenService.verifySession(token);
 
       if (!user) {
         return {
@@ -41,15 +41,15 @@ export class WebSocketAuthMiddleware {
       }
 
       // Generate unique connection ID
-      const connectionId = this.generateConnectionId(user.id);
+      const connectionId = this.generateConnectionId(user.userId);
 
       return {
         success: true,
         user: {
-          id: user.id,
+          id: user.userId,
           email: user.email,
           role: user.role,
-          fullName: user.fullName
+          fullName: user.fullName || undefined
         },
         connectionId
       };
@@ -261,8 +261,8 @@ export enum WebSocketAction {
 
 // Connection security configuration
 export const WebSocketSecurityConfig = {
-  // Maximum connections per user
-  maxConnectionsPerUser: 5,
+  // Maximum connections per user (increased for development)
+  maxConnectionsPerUser: 20,
 
   // Maximum message size (bytes)
   maxMessageSize: 10 * 1024, // 10KB

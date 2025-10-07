@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
 
       const analytics = await KnowledgeBaseService.getSearchPerformanceMetrics(
         analyticsParams.timeframe,
-        analyticsParams.chatbotId
+        analyticsParams.chatbotId || undefined
       );
 
       return NextResponse.json(

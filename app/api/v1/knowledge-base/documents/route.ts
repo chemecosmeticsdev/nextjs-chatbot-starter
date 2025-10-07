@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
       .from(documents)
       .where(whereCondition);
 
-    // Get documents with pagination
+    // Get documents with pagination and structured metadata
     const documentsResult = await db
       .select({
         id: documents.id,
@@ -95,6 +95,28 @@ export async function GET(request: NextRequest) {
         uploadedBy: documents.uploadedBy,
         createdAt: documents.createdAt,
         updatedAt: documents.updatedAt,
+        // Structured metadata fields
+        supplierName: documents.supplierName,
+        supplierNormalized: documents.supplierNormalized,
+        supplierCountry: documents.supplierCountry,
+        ingredientName: documents.ingredientName,
+        ingredientNormalized: documents.ingredientNormalized,
+        ingredientInciName: documents.ingredientInciName,
+        ingredientCasNumber: documents.ingredientCasNumber,
+        ragDocumentType: documents.ragDocumentType,
+        documentSubtype: documents.documentSubtype,
+        complianceTypes: documents.complianceTypes,
+        certificationBodies: documents.certificationBodies,
+        regulatoryRegions: documents.regulatoryRegions,
+        keywords: documents.keywords,
+        casNumbers: documents.casNumbers,
+        inciNames: documents.inciNames,
+        allergens: documents.allergens,
+        qualityScore: documents.qualityScore,
+        validationStatus: documents.validationStatus,
+        language: documents.language,
+        pageCount: documents.pageCount,
+        wordCount: documents.wordCount,
       })
       .from(documents)
       .where(whereCondition)
@@ -220,7 +242,7 @@ export async function POST(request: NextRequest) {
           mimeType: uploadData.mimeType,
           fileSize: content.length,
           fileSizeBytes: content.length.toString(),
-          documentType: 'inci', // Default document type
+          documentType: 'formulation', // Default document type
           metadata: uploadData.metadata || {},
           processingStatus: 'pending',
           uploadedBy: user.id,

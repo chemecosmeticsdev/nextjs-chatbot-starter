@@ -18,13 +18,19 @@ import {
   Filter,
   Download,
   Trash2,
-  Settings,
   AlertCircle,
   CheckCircle,
   Clock,
   XCircle,
   Eye,
-  MoreHorizontal
+  MoreHorizontal,
+  TrendingUp,
+  TrendingDown,
+  Activity,
+  Timer,
+  Target,
+  Users,
+  Zap
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -39,6 +45,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
 
 interface Document {
   id: string;
@@ -74,6 +100,37 @@ interface KnowledgeBaseStats {
     totalSizeBytes: number;
     avgDocumentSize: number;
   };
+}
+
+interface SearchAnalytics {
+  totalQueries: number;
+  avgResponseTime: number;
+  cacheHitRate: number;
+  topQueries: Array<{
+    query: string;
+    count: number;
+    avgResponseTime: number;
+  }>;
+  queryDistribution: Record<string, number>;
+  errorRate: number;
+}
+
+interface ProcessingAnalytics {
+  currentStatus: {
+    pending: number;
+    processing: number;
+    completed: number;
+    failed: number;
+  };
+  recentActivity: Array<{
+    date: string;
+    completed: number;
+    failed: number;
+    avgProcessingTime: number;
+  }>;
+  totalDocuments: number;
+  totalChunks: number;
+  avgChunksPerDocument: number;
 }
 
 interface SearchResult {
@@ -118,6 +175,19 @@ export default function KnowledgeBasePage() {
   const [error, setError] = useState<string | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
 
+  // Analytics state
+  const [searchAnalytics, setSearchAnalytics] = useState<SearchAnalytics | null>(null);
+  const [processingAnalytics, setProcessingAnalytics] = useState<ProcessingAnalytics | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsError, setAnalyticsError] = useState<string | null>(null);
+
+  // Document action states
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
+  const [viewDetailsOpen, setViewDetailsOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [reprocessDialogOpen, setReprocessDialogOpen] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
@@ -139,6 +209,12 @@ export default function KnowledgeBasePage() {
     fetchDocuments();
     fetchStats();
   }, [currentPage, statusFilter, categoryFilter]);
+
+  useEffect(() => {
+    if (activeTab === 'analytics') {
+      fetchAnalytics();
+    }
+  }, [activeTab]);
 
   const fetchDocuments = async () => {
     try {
@@ -209,6 +285,48 @@ export default function KnowledgeBasePage() {
       }
     } catch (err) {
       console.error('Error fetching stats:', err);
+    }
+  };
+
+  const fetchAnalytics = async () => {
+    if (activeTab !== 'analytics') return;
+
+    try {
+      setAnalyticsLoading(true);
+      setAnalyticsError(null);
+
+      // Fetch search analytics
+      const searchResponse = await fetch('/api/v1/knowledge-base/stats?type=search&timeframe=7d', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+      });
+
+      if (searchResponse.ok) {
+        const searchData = await searchResponse.json();
+        if (searchData.success) {
+          setSearchAnalytics(searchData.data.analytics);
+        }
+      }
+
+      // Fetch processing analytics
+      const processingResponse = await fetch('/api/v1/knowledge-base/stats?type=processing', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+      });
+
+      if (processingResponse.ok) {
+        const processingData = await processingResponse.json();
+        if (processingData.success) {
+          setProcessingAnalytics(processingData.data.processing);
+        }
+      }
+    } catch (err: any) {
+      console.error('Error fetching analytics:', err);
+      setAnalyticsError(err.message || 'Failed to load analytics data');
+    } finally {
+      setAnalyticsLoading(false);
     }
   };
 
@@ -319,6 +437,446 @@ export default function KnowledgeBasePage() {
 
   const formatDate = (dateString: string): string => {
     return new Date(dateString).toLocaleDateString();
+  };
+
+  // Document action handlers
+  const handleViewDetails = (document: Document) => {
+    setSelectedDocument(document);
+    setViewDetailsOpen(true);
+  };
+
+  const handleDownload = async (document: Document) => {
+    try {
+      setActionLoading(`download-${document.id}`);
+
+      const response = await fetch(`/api/v1/knowledge-base/documents/${document.id}/download`, {
+        method: 'GET',
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.statusText}`);
+      }
+
+      // Get the filename from the response headers
+      const contentDisposition = response.headers.get('content-disposition');
+      let filename = document.filename;
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      // Convert response to blob and download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success(`Downloaded ${filename} successfully`);
+    } catch (error: any) {
+      console.error('Error downloading document:', error);
+      toast.error(error.message || 'Failed to download document');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleReprocess = async (document: Document) => {
+    try {
+      setActionLoading(`reprocess-${document.id}`);
+
+      const response = await fetch(`/api/v1/knowledge-base/documents/${document.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          action: 'reprocess'
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Reprocess failed: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to reprocess document');
+      }
+
+      toast.success('Document reprocessing started successfully');
+      setReprocessDialogOpen(false);
+      fetchDocuments(); // Refresh the documents list
+    } catch (error: any) {
+      console.error('Error reprocessing document:', error);
+      toast.error(error.message || 'Failed to reprocess document');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+
+  const handleDelete = async (document: Document) => {
+    try {
+      setActionLoading(`delete-${document.id}`);
+
+      const response = await fetch(`/api/v1/knowledge-base/documents/${document.id}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error(`Delete failed: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to delete document');
+      }
+
+      toast.success('Document deleted successfully');
+      setDeleteDialogOpen(false);
+      fetchDocuments(); // Refresh the documents list
+    } catch (error: any) {
+      console.error('Error deleting document:', error);
+      toast.error(error.message || 'Failed to delete document');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Helper functions for analytics
+  const formatDuration = (ms: number): string => {
+    if (ms < 1000) return `${ms}ms`;
+    const seconds = ms / 1000;
+    if (seconds < 60) return `${seconds.toFixed(1)}s`;
+    const minutes = seconds / 60;
+    return `${minutes.toFixed(1)}m`;
+  };
+
+  const formatPercentage = (value: number): string => {
+    return `${(value * 100).toFixed(1)}%`;
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed': return 'text-green-600';
+      case 'processing': return 'text-blue-600';
+      case 'pending': return 'text-yellow-600';
+      case 'failed': return 'text-red-600';
+      default: return 'text-gray-600';
+    }
+  };
+
+  const getTrendIcon = (trend: number) => {
+    if (trend > 0) return <TrendingUp className="h-4 w-4 text-green-600" />;
+    if (trend < 0) return <TrendingDown className="h-4 w-4 text-red-600" />;
+    return <Activity className="h-4 w-4 text-gray-600" />;
+  };
+
+  // Analytics Components
+  const DocumentProcessingAnalytics = () => {
+    if (!processingAnalytics) return null;
+
+    const total = processingAnalytics.currentStatus.pending +
+                  processingAnalytics.currentStatus.processing +
+                  processingAnalytics.currentStatus.completed +
+                  processingAnalytics.currentStatus.failed;
+
+    const successRate = total > 0 ? processingAnalytics.currentStatus.completed / total : 0;
+
+    return (
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <Activity className="h-5 w-5" />
+          Document Processing Analytics
+        </h3>
+
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
+              <CheckCircle className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">
+                {formatPercentage(successRate)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {processingAnalytics.currentStatus.completed} of {total} documents
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Processing Queue</CardTitle>
+              <Clock className="h-4 w-4 text-blue-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">
+                {processingAnalytics.currentStatus.processing + processingAnalytics.currentStatus.pending}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {processingAnalytics.currentStatus.processing} processing, {processingAnalytics.currentStatus.pending} pending
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Failed Documents</CardTitle>
+              <XCircle className="h-4 w-4 text-red-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-600">
+                {processingAnalytics.currentStatus.failed}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Require attention
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Avg Chunks/Doc</CardTitle>
+              <Database className="h-4 w-4 text-purple-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-purple-600">
+                {processingAnalytics.avgChunksPerDocument.toFixed(1)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Total: {processingAnalytics.totalChunks} chunks
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {processingAnalytics.recentActivity && processingAnalytics.recentActivity.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Recent Processing Activity</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {processingAnalytics.recentActivity.slice(0, 5).map((activity, index) => (
+                  <div key={index} className="flex items-center justify-between py-2 border-b last:border-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">{activity.date}</span>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm">
+                      <span className="text-green-600">{activity.completed} completed</span>
+                      <span className="text-red-600">{activity.failed} failed</span>
+                      <span className="text-blue-600">{formatDuration(activity.avgProcessingTime)} avg</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    );
+  };
+
+  const SearchPerformanceMetrics = () => {
+    if (!searchAnalytics) return null;
+
+    return (
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <Search className="h-5 w-5" />
+          Search Performance Metrics
+        </h3>
+
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Queries</CardTitle>
+              <Target className="h-4 w-4 text-blue-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{searchAnalytics.totalQueries}</div>
+              <p className="text-xs text-muted-foreground">
+                Last 7 days
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Avg Response Time</CardTitle>
+              <Timer className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">
+                {formatDuration(searchAnalytics.avgResponseTime)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Search performance
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Cache Hit Rate</CardTitle>
+              <Zap className="h-4 w-4 text-yellow-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-yellow-600">
+                {formatPercentage(searchAnalytics.cacheHitRate)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Cached responses
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Error Rate</CardTitle>
+              <AlertCircle className="h-4 w-4 text-red-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-600">
+                {formatPercentage(searchAnalytics.errorRate)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Failed searches
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {searchAnalytics.topQueries && searchAnalytics.topQueries.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Top Search Queries</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {searchAnalytics.topQueries.slice(0, 5).map((query, index) => (
+                  <div key={index} className="flex items-center justify-between py-2 border-b last:border-0">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">{index + 1}</Badge>
+                      <span className="text-sm font-medium">{query.query}</span>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <span>{query.count} times</span>
+                      <span>{formatDuration(query.avgResponseTime)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    );
+  };
+
+  const ContentQualityOverview = () => {
+    if (!stats) return null;
+
+    const totalDocs = stats.totalDocuments;
+    const categories = Object.entries(stats.documentsByCategory || {});
+    const suppliers = Object.entries(stats.documentsBySupplier || {});
+
+    return (
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <BarChart3 className="h-5 w-5" />
+          Content Quality Overview
+        </h3>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Content by Category</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {categories.slice(0, 5).map(([category, count], index) => (
+                  <div key={index} className="flex items-center justify-between">
+                    <span className="text-sm font-medium">{category || 'Uncategorized'}</span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-20 bg-gray-200 rounded-full h-2">
+                        <div
+                          className="bg-blue-600 h-2 rounded-full"
+                          style={{ width: `${(count / totalDocs) * 100}%` }}
+                        ></div>
+                      </div>
+                      <span className="text-sm text-muted-foreground">{count}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Content by Supplier</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {suppliers.slice(0, 5).map(([supplier, count], index) => (
+                  <div key={index} className="flex items-center justify-between">
+                    <span className="text-sm font-medium">{supplier || 'Unknown'}</span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-20 bg-gray-200 rounded-full h-2">
+                        <div
+                          className="bg-green-600 h-2 rounded-full"
+                          style={{ width: `${(count / totalDocs) * 100}%` }}
+                        ></div>
+                      </div>
+                      <span className="text-sm text-muted-foreground">{count}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Storage Analytics</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-600">
+                  {formatFileSize(stats.storageStats.totalSizeBytes)}
+                </div>
+                <p className="text-sm text-muted-foreground">Total Storage</p>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600">
+                  {formatFileSize(stats.storageStats.avgDocumentSize)}
+                </div>
+                <p className="text-sm text-muted-foreground">Avg Document Size</p>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-purple-600">
+                  {stats.totalChunks}
+                </div>
+                <p className="text-sm text-muted-foreground">Vector Chunks</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   };
 
   return (
@@ -684,23 +1242,34 @@ export default function KnowledgeBasePage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleViewDetails(doc)}>
                                 <Eye className="mr-2 h-4 w-4" />
                                 View Details
                               </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <RefreshCw className="mr-2 h-4 w-4" />
-                                Reprocess
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedDocument(doc);
+                                  setReprocessDialogOpen(true);
+                                }}
+                                disabled={actionLoading === `reprocess-${doc.id}`}
+                              >
+                                <RefreshCw className={`mr-2 h-4 w-4 ${actionLoading === `reprocess-${doc.id}` ? 'animate-spin' : ''}`} />
+                                {actionLoading === `reprocess-${doc.id}` ? 'Reprocessing...' : 'Reprocess'}
                               </DropdownMenuItem>
-                              <DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleDownload(doc)}
+                                disabled={actionLoading === `download-${doc.id}`}
+                              >
                                 <Download className="mr-2 h-4 w-4" />
-                                Download
+                                {actionLoading === `download-${doc.id}` ? 'Downloading...' : 'Download'}
                               </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <Settings className="mr-2 h-4 w-4" />
-                                Edit Metadata
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-destructive">
+                              <DropdownMenuItem
+                                className="text-destructive"
+                                onClick={() => {
+                                  setSelectedDocument(doc);
+                                  setDeleteDialogOpen(true);
+                                }}
+                              >
                                 <Trash2 className="mr-2 h-4 w-4" />
                                 Delete
                               </DropdownMenuItem>
@@ -750,21 +1319,210 @@ export default function KnowledgeBasePage() {
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Knowledge Base Analytics</CardTitle>
-              <CardDescription>
-                Performance metrics and usage statistics
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                Analytics dashboard coming soon...
+          {analyticsError && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                {analyticsError}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="ml-2"
+                  onClick={() => {
+                    setAnalyticsError(null);
+                    fetchAnalytics();
+                  }}
+                >
+                  Try Again
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight">Knowledge Base Analytics</h2>
+              <p className="text-muted-foreground">
+                Performance metrics and usage insights for your knowledge base
+              </p>
+            </div>
+            <Button variant="outline" onClick={fetchAnalytics} disabled={analyticsLoading}>
+              <RefreshCw className={`mr-2 h-4 w-4 ${analyticsLoading ? 'animate-spin' : ''}`} />
+              {analyticsLoading ? 'Loading...' : 'Refresh'}
+            </Button>
+          </div>
+
+          {analyticsLoading ? (
+            <div className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                {[...Array(4)].map((_, i) => (
+                  <Card key={i}>
+                    <CardHeader className="space-y-0 pb-2">
+                      <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-8 bg-gray-200 rounded animate-pulse mb-2"></div>
+                      <div className="h-3 bg-gray-100 rounded animate-pulse"></div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
-            </CardContent>
-          </Card>
+              {[...Array(3)].map((_, i) => (
+                <Card key={i}>
+                  <CardHeader>
+                    <div className="h-5 bg-gray-200 rounded animate-pulse w-1/3"></div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {[...Array(3)].map((_, j) => (
+                        <div key={j} className="h-16 bg-gray-100 rounded animate-pulse"></div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-8">
+              <DocumentProcessingAnalytics />
+              <SearchPerformanceMetrics />
+              <ContentQualityOverview />
+            </div>
+          )}
         </TabsContent>
       </Tabs>
+
+      {/* View Details Modal */}
+      <Dialog open={viewDetailsOpen} onOpenChange={setViewDetailsOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Document Details</DialogTitle>
+            <DialogDescription>
+              View detailed information about this document
+            </DialogDescription>
+          </DialogHeader>
+          {selectedDocument && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium">Title</Label>
+                  <p className="text-sm">{selectedDocument.title}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Filename</Label>
+                  <p className="text-sm">{selectedDocument.filename}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">File Size</Label>
+                  <p className="text-sm">{formatFileSize(selectedDocument.fileSize)}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">MIME Type</Label>
+                  <p className="text-sm">{selectedDocument.mimeType}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Processing Status</Label>
+                  <div className="flex items-center gap-2">
+                    {getStatusIcon(selectedDocument.processingStatus)}
+                    {getStatusBadge(selectedDocument.processingStatus)}
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Chunk Count</Label>
+                  <p className="text-sm">{selectedDocument.chunkCount}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Uploaded By</Label>
+                  <p className="text-sm">{selectedDocument.uploadedBy}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Created At</Label>
+                  <p className="text-sm">{formatDate(selectedDocument.createdAt)}</p>
+                </div>
+              </div>
+
+              {selectedDocument.metadata && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Metadata</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-3 bg-gray-50 rounded">
+                    {selectedDocument.metadata.category && (
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Category</Label>
+                        <p className="text-sm">{selectedDocument.metadata.category}</p>
+                      </div>
+                    )}
+                    {selectedDocument.metadata.supplier && (
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Supplier</Label>
+                        <p className="text-sm">{selectedDocument.metadata.supplier}</p>
+                      </div>
+                    )}
+                    {selectedDocument.metadata.tags && selectedDocument.metadata.tags.length > 0 && (
+                      <div className="md:col-span-2">
+                        <Label className="text-xs text-muted-foreground">Tags</Label>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {selectedDocument.metadata.tags.map((tag, index) => (
+                            <Badge key={index} variant="outline" className="text-xs">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the document "{selectedDocument?.title || selectedDocument?.filename}".
+              This action cannot be undone and will also delete all associated chunks and embeddings.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => selectedDocument && handleDelete(selectedDocument)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={actionLoading === `delete-${selectedDocument?.id}`}
+            >
+              {actionLoading === `delete-${selectedDocument?.id}` ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reprocess Confirmation Dialog */}
+      <AlertDialog open={reprocessDialogOpen} onOpenChange={setReprocessDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reprocess Document</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will reprocess the document "{selectedDocument?.title || selectedDocument?.filename}".
+              The document will be re-analyzed and new embeddings will be generated, replacing the existing ones.
+              This may take some time depending on the document size.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => selectedDocument && handleReprocess(selectedDocument)}
+              disabled={actionLoading === `reprocess-${selectedDocument?.id}`}
+            >
+              {actionLoading === `reprocess-${selectedDocument?.id}` ? 'Starting...' : 'Reprocess'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

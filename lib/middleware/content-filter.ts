@@ -3,6 +3,8 @@ import { ContentModerationService } from '@/lib/services/content-moderation';
 import { rateLimiters } from '@/lib/security/rate-limiter';
 import { getClientIdentifier } from '@/lib/security/rate-limiter';
 import { AuditLogger, SecurityEventType } from '@/lib/security/audit-logger';
+import { AuthTokenService } from '@/lib/auth';
+import { UserSyncService } from '@/lib/user-sync';
 import type { ModerationContext, ModerationResult } from '@/lib/db/schema';
 
 export interface ContentFilterOptions {
@@ -130,7 +132,7 @@ async function buildModerationContext(
   const chatbotId = pathParts[chatbotIdIndex] || 'unknown';
 
   // Extract user information
-  const userId = extractUserIdFromRequest(request, body);
+  const userId = await extractUserIdFromRequest(request, body);
   const userIdentifier = getClientIdentifier(request, userId);
 
   return {
@@ -152,28 +154,18 @@ async function buildModerationContext(
 /**
  * Extract user ID from request (from auth header, session, or body)
  */
-function extractUserIdFromRequest(request: NextRequest, body: any): string | undefined {
-  // Try to extract from Authorization header (JWT)
-  const authHeader = request.headers.get('authorization');
-  if (authHeader?.startsWith('Bearer ')) {
-    try {
-      const token = authHeader.substring(7);
-      // This would decode JWT to get user ID in production
-      // For now, return placeholder
-      return 'user-from-jwt';
-    } catch (error) {
-      // Invalid JWT
+async function extractUserIdFromRequest(request: NextRequest, body: any): Promise<string | undefined> {
+  try {
+    // Use production AuthTokenService to verify and extract user data
+    const sessionData = await AuthTokenService.verifyRequest(request);
+    if (sessionData?.userId) {
+      return sessionData.userId;
     }
+  } catch (error) {
+    console.error('Authentication verification failed:', error);
   }
 
-  // Try to extract from session cookie
-  const sessionCookie = request.cookies.get('session');
-  if (sessionCookie) {
-    // This would decode session to get user ID in production
-    return 'user-from-session';
-  }
-
-  // Try to extract from request body
+  // Fallback: Try to extract from request body (for internal APIs)
   if (body.userId) return body.userId;
 
   return undefined;
@@ -183,17 +175,25 @@ function extractUserIdFromRequest(request: NextRequest, body: any): string | und
  * Check if user is exempt from content moderation
  */
 async function isUserExempt(userId: string | undefined, exemptRoles?: string[]): Promise<boolean> {
-  if (!userId || !exemptRoles?.length) return false;
+  if (!userId) return false;
 
-  // This would check user roles against exempt roles in production
-  // For now, exempt admin and super_admin by default
-  const defaultExemptRoles = ['admin', 'super_admin'];
-  const allExemptRoles = [...defaultExemptRoles, ...exemptRoles];
+  try {
+    // Get user details from database
+    const user = await UserSyncService.getUserById(userId);
+    if (!user || !user.is_active) return false;
 
-  // Placeholder: In production, query user role from database
-  const userRole = 'user'; // This would come from actual user lookup
+    // Build list of exempt roles
+    const defaultExemptRoles = ['admin', 'super_admin'];
+    const allExemptRoles = exemptRoles?.length
+      ? [...defaultExemptRoles, ...exemptRoles]
+      : defaultExemptRoles;
 
-  return allExemptRoles.includes(userRole);
+    return allExemptRoles.includes(user.role);
+  } catch (error) {
+    console.error('Error checking user exemption:', error);
+    // Fail secure: if we can't verify exemption, don't exempt
+    return false;
+  }
 }
 
 /**

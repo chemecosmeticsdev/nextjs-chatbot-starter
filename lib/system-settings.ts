@@ -393,7 +393,7 @@ export class SystemSettingsService {
         },
         {
           key: 'embedding_model' as AdminSettingsKey,
-          value: 'amazon.titan-embed-text-v1',
+          value: 'amazon.titan-embed-text-v2:0',
           description: 'Embedding model for vector search (read-only)'
         },
         {

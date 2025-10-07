@@ -1,5 +1,16 @@
 import { cacheInstances, cacheKeys, CacheInvalidator } from './redis-cache';
 import { db } from '@/lib/db';
+import {
+  chatbotInstances,
+  chatbotConversations,
+  chatbotMessages,
+  documents,
+  documentChunks,
+  systemSettings,
+  systemConfigs
+} from '@/lib/db/schema';
+import { eq, and, desc, count, sql } from 'drizzle-orm';
+import { CachedAnalyticsService } from './cached-analytics';
 import type {
   ChatbotInstance,
   ChatbotConversation,
@@ -213,16 +224,13 @@ export class QueryCache {
   // Private database fetch methods
   private static async fetchChatbotFromDB(id: string): Promise<ChatbotInstance | null> {
     try {
-      // This would use the actual ChatbotService
-      // For now, return mock data structure
-      return {
-        id,
-        name: `Chatbot ${id}`,
-        description: 'Cached chatbot',
-        status: 'active',
-        created_at: new Date(),
-        updated_at: new Date()
-      } as any;
+      const [chatbot] = await db
+        .select()
+        .from(chatbotInstances)
+        .where(eq(chatbotInstances.id, id))
+        .limit(1);
+
+      return chatbot || null;
     } catch (error) {
       console.error('Error fetching chatbot from DB:', error);
       return null;
@@ -231,14 +239,35 @@ export class QueryCache {
 
   private static async fetchChatbotListFromDB(filters: any): Promise<{ chatbots: ChatbotInstance[]; total: number }> {
     try {
-      // This would implement actual database query with filters
-      // For now, return mock data
+      const { status, userId, limit = 50, offset = 0 } = filters;
+
+      // Build where conditions
+      const whereConditions = [];
+      if (status) {
+        whereConditions.push(eq(chatbotInstances.status, status));
+      }
+      if (userId) {
+        whereConditions.push(eq(chatbotInstances.userId, userId));
+      }
+
+      // Fetch chatbots with pagination
+      const chatbots = await db
+        .select()
+        .from(chatbotInstances)
+        .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
+        .orderBy(desc(chatbotInstances.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      // Get total count
+      const [{ total }] = await db
+        .select({ total: count() })
+        .from(chatbotInstances)
+        .where(whereConditions.length > 0 ? and(...whereConditions) : undefined);
+
       return {
-        chatbots: [
-          { id: '1', name: 'Chatbot 1', status: 'active' },
-          { id: '2', name: 'Chatbot 2', status: 'inactive' }
-        ] as any,
-        total: 2
+        chatbots,
+        total: total || 0
       };
     } catch (error) {
       console.error('Error fetching chatbot list from DB:', error);
@@ -248,15 +277,13 @@ export class QueryCache {
 
   private static async fetchConversationFromDB(id: string): Promise<ChatbotConversation | null> {
     try {
-      // This would use the actual ConversationService
-      return {
-        id,
-        chatbot_id: 'chatbot-1',
-        user_id: 'user-1',
-        status: 'active',
-        created_at: new Date(),
-        updated_at: new Date()
-      } as any;
+      const [conversation] = await db
+        .select()
+        .from(chatbotConversations)
+        .where(eq(chatbotConversations.id, id))
+        .limit(1);
+
+      return conversation || null;
     } catch (error) {
       console.error('Error fetching conversation from DB:', error);
       return null;
@@ -268,23 +295,17 @@ export class QueryCache {
     options: { limit?: number; offset?: number } = {}
   ): Promise<ChatbotMessage[]> {
     try {
-      // This would implement actual message fetching
-      return [
-        {
-          id: '1',
-          conversation_id: conversationId,
-          role: 'user',
-          content: 'Hello',
-          created_at: new Date()
-        },
-        {
-          id: '2',
-          conversation_id: conversationId,
-          role: 'assistant',
-          content: 'Hi there!',
-          created_at: new Date()
-        }
-      ] as any;
+      const { limit = 50, offset = 0 } = options;
+
+      const messages = await db
+        .select()
+        .from(chatbotMessages)
+        .where(eq(chatbotMessages.conversationId, conversationId))
+        .orderBy(chatbotMessages.createdAt)
+        .limit(limit)
+        .offset(offset);
+
+      return messages;
     } catch (error) {
       console.error('Error fetching conversation messages from DB:', error);
       return [];
@@ -297,22 +318,43 @@ export class QueryCache {
     options: { limit?: number; threshold?: number } = {}
   ): Promise<any[]> {
     try {
-      // This would implement actual vector search
-      // For now, return mock results
-      return [
-        {
-          id: '1',
-          content: 'Vector search result 1',
-          similarity: 0.95,
-          metadata: { source: 'document1.pdf' }
-        },
-        {
-          id: '2',
-          content: 'Vector search result 2',
-          similarity: 0.85,
-          metadata: { source: 'document2.pdf' }
+      const { limit = 10, threshold = 0.7 } = options;
+
+      // Basic text search on document chunks for the specific chatbot
+      // Note: This is a simplified implementation. In production, this would use
+      // embedding similarity search with vector operations
+      const results = await db
+        .select({
+          id: documentChunks.id,
+          content: documentChunks.content,
+          metadata: documentChunks.metadata,
+          documentId: documentChunks.documentId,
+          title: documents.title,
+          filename: documents.filename
+        })
+        .from(documentChunks)
+        .innerJoin(documents, eq(documentChunks.documentId, documents.id))
+        .where(
+          and(
+            eq(documents.chatbotId, chatbotId),
+            sql`${documentChunks.content} ILIKE ${'%' + query + '%'}`
+          )
+        )
+        .orderBy(desc(documentChunks.createdAt))
+        .limit(limit);
+
+      // Transform to expected format with mock similarity scores
+      return results.map((result, index) => ({
+        id: result.id,
+        content: result.content,
+        similarity: Math.max(0.5, 1.0 - (index * 0.1)), // Mock similarity decreasing by rank
+        metadata: {
+          ...(result.metadata as object || {}),
+          documentId: result.documentId,
+          source: result.filename || result.title || 'Unknown',
+          title: result.title
         }
-      ];
+      })).filter(result => result.similarity >= threshold);
     } catch (error) {
       console.error('Error performing vector search:', error);
       return [];
@@ -325,54 +367,160 @@ export class QueryCache {
     chatbotId?: string
   ): Promise<any> {
     try {
-      // This would implement actual analytics fetching
+      if (!chatbotId) {
+        // Return empty analytics for global queries without specific chatbot
+        return {
+          type,
+          timeframe,
+          chatbotId: null,
+          metrics: {
+            total_conversations: 0,
+            total_messages: 0,
+            avg_response_time: 0,
+            user_satisfaction: 0
+          },
+          timestamp: new Date()
+        };
+      }
+
+      // Use the existing CachedAnalyticsService based on type
+      let analyticsData;
+      switch (type) {
+        case 'dashboard':
+        case 'overview':
+          analyticsData = await CachedAnalyticsService.getDashboardMetrics(
+            chatbotId,
+            timeframe as '1h' | '24h' | '7d' | '30d'
+          );
+          break;
+        case 'realtime':
+          analyticsData = await CachedAnalyticsService.getRealtimeMetrics(chatbotId);
+          break;
+        case 'performance':
+        case 'stats':
+          analyticsData = await CachedAnalyticsService.getChatbotStats(chatbotId);
+          break;
+        default:
+          // Fallback to dashboard metrics
+          analyticsData = await CachedAnalyticsService.getDashboardMetrics(
+            chatbotId,
+            timeframe as '1h' | '24h' | '7d' | '30d'
+          );
+      }
+
       return {
         type,
         timeframe,
         chatbotId,
-        metrics: {
-          total_conversations: 150,
-          total_messages: 450,
-          avg_response_time: 1.2,
-          user_satisfaction: 4.5
-        },
+        metrics: analyticsData,
         timestamp: new Date()
       };
     } catch (error) {
       console.error('Error fetching analytics from DB:', error);
-      return null;
+      return {
+        type,
+        timeframe,
+        chatbotId,
+        metrics: {},
+        error: error.message,
+        timestamp: new Date()
+      };
     }
   }
 
   private static async fetchKnowledgeBaseFromDB(chatbotId: string): Promise<any> {
     try {
-      // This would implement actual knowledge base fetching
+      // Get documents for the chatbot
+      const documentsData = await db
+        .select({
+          id: documents.id,
+          title: documents.title,
+          filename: documents.filename,
+          status: documents.status,
+          uploadedAt: documents.uploadedAt,
+          createdAt: documents.createdAt
+        })
+        .from(documents)
+        .where(eq(documents.chatbotId, chatbotId))
+        .orderBy(desc(documents.createdAt));
+
+      // Get chunk statistics
+      const [chunkStats] = await db
+        .select({
+          totalChunks: count(documentChunks.id),
+          lastUpdated: sql<Date>`MAX(${documentChunks.createdAt})`
+        })
+        .from(documentChunks)
+        .innerJoin(documents, eq(documentChunks.documentId, documents.id))
+        .where(eq(documents.chatbotId, chatbotId));
+
       return {
         chatbotId,
-        documents: [
-          { id: '1', title: 'Product Guide', status: 'processed' },
-          { id: '2', title: 'FAQ Document', status: 'processed' }
-        ],
+        documents: documentsData.map(doc => ({
+          id: doc.id,
+          title: doc.title,
+          filename: doc.filename,
+          status: doc.status || 'unknown',
+          uploadedAt: doc.uploadedAt,
+          createdAt: doc.createdAt
+        })),
         stats: {
-          total_documents: 2,
-          total_chunks: 150,
-          last_updated: new Date()
+          total_documents: documentsData.length,
+          total_chunks: chunkStats?.totalChunks || 0,
+          last_updated: chunkStats?.lastUpdated || new Date()
         }
       };
     } catch (error) {
       console.error('Error fetching knowledge base from DB:', error);
-      return null;
+      return {
+        chatbotId,
+        documents: [],
+        stats: {
+          total_documents: 0,
+          total_chunks: 0,
+          last_updated: new Date()
+        },
+        error: error.message
+      };
     }
   }
 
   private static async fetchSystemConfigFromDB(key: string): Promise<any> {
     try {
-      // This would implement actual system config fetching
-      return {
-        key,
-        value: `config_value_for_${key}`,
-        updated_at: new Date()
-      };
+      // Try system_configs table first (new format)
+      const [config] = await db
+        .select()
+        .from(systemConfigs)
+        .where(eq(systemConfigs.key, key))
+        .limit(1);
+
+      if (config) {
+        return {
+          key: config.key,
+          value: config.value,
+          updated_at: config.updatedAt,
+          created_at: config.createdAt
+        };
+      }
+
+      // Fallback to system_settings table (legacy format)
+      const [setting] = await db
+        .select()
+        .from(systemSettings)
+        .where(eq(systemSettings.key, key))
+        .limit(1);
+
+      if (setting) {
+        return {
+          key: setting.key,
+          value: setting.value,
+          updated_at: setting.updatedAt,
+          created_at: setting.createdAt
+        };
+      }
+
+      // Return null if not found in either table
+      return null;
     } catch (error) {
       console.error('Error fetching system config from DB:', error);
       return null;

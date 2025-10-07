@@ -23,6 +23,11 @@ export const users = pgTable('users', {
   role: varchar('role', { length: 50 }).notNull().default('user'),
   isActive: boolean('is_active').notNull().default(true),
   lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
+  // Google Drive OAuth credentials (encrypted)
+  googleDriveAccessToken: text('google_drive_access_token'),
+  googleDriveRefreshToken: text('google_drive_refresh_token'),
+  googleDriveTokenExpiry: timestamp('google_drive_token_expiry', { withTimezone: true }),
+  googleDriveScopes: text('google_drive_scopes'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });
@@ -60,6 +65,27 @@ export const documentCategoryEnum = pgEnum('document_category', [
 ]);
 export const processingStatusEnum = pgEnum('processing_status', ['pending', 'processing', 'completed', 'failed']);
 
+// Enhanced document type classification (from RAG implementation plan)
+export const ragDocumentTypeEnum = pgEnum('rag_document_type', [
+  'sds', 'msds', 'specification', 'technical_data_sheet', 'certificate_of_analysis',
+  'reach_registration', 'halal_certificate', 'kosher_certificate', 'iso_certificate',
+  'fssc_certificate', 'haccp_certificate', 'gmp_certificate', 'composition_sheet',
+  'allergen_statement', 'gmo_statement', 'vegan_statement', 'palm_free_statement',
+  'animal_testing_statement', 'naturalness_statement', 'manufacturing_procedure',
+  'process_flow_chart', 'product_presentation', 'product_catalog', 'product_profile',
+  'application_guide', 'regulatory_document', 'proposition_65', 'country_of_origin',
+  'email', 'image', 'other'
+]);
+
+// Version status for document lifecycle
+export const versionStatusEnum = pgEnum('version_status', ['current', 'archived', 'superseded', 'draft']);
+
+// Extraction method used for processing
+export const extractionMethodEnum = pgEnum('extraction_method', ['docling', 'mistral_ocr', 'manual', 'hybrid']);
+
+// Validation status for quality control
+export const validationStatusEnum = pgEnum('validation_status', ['verified', 'pending', 'failed', 'auto_validated']);
+
 // Documents table (updated to match actual database schema)
 export const documents = pgTable('documents', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -83,8 +109,113 @@ export const documents = pgTable('documents', {
   title: varchar('title', { length: 255 }),
   filename: varchar('filename', { length: 255 }),
   fileSize: integer('file_size'),
-  extractedText: text('extracted_text'), // Add extracted text field
-});
+  extractedText: text('extracted_text'),
+
+  // === GOOGLE DRIVE FOLDER STRUCTURE METADATA ===
+  // Hierarchical Classification
+  supplierName: varchar('supplier_name', { length: 255 }), // Original: "BASF", "ANHUI GREAT"
+  supplierNormalized: varchar('supplier_normalized', { length: 255 }), // Lowercase, trimmed: "basf", "anhui great"
+  supplierCountry: varchar('supplier_country', { length: 100 }), // Extracted from docs or manual entry
+
+  ingredientName: varchar('ingredient_name', { length: 255 }), // Original: "Menthol Crystal (Natural)"
+  ingredientNormalized: varchar('ingredient_normalized', { length: 255 }), // Cleaned: "menthol crystal natural"
+  ingredientCode: varchar('ingredient_code', { length: 100 }), // Internal SKU/product code
+  ingredientInciName: varchar('ingredient_inci_name', { length: 255 }), // INCI name: "MENTHOL"
+  ingredientCasNumber: varchar('ingredient_cas_number', { length: 50 }), // Primary CAS: "89-78-1"
+
+  // Document Classification
+  ragDocumentType: ragDocumentTypeEnum('rag_document_type'), // Enhanced document type
+  documentSubtype: varchar('document_subtype', { length: 100 }), // Specific variant (e.g., "Halal MUI", "ISO9001")
+
+  // Google Drive Source Information
+  googleDriveFileId: varchar('google_drive_file_id', { length: 255 }), // Original Google Drive file ID
+  googleDriveFolderPath: text('google_drive_folder_path'), // Complete folder path: "/PC/BASF/Vitamin E/..."
+  googleDriveParentFolderId: varchar('google_drive_parent_folder_id', { length: 255 }), // Immediate parent folder ID
+
+  // Version Control & Lifecycle
+  versionDate: timestamp('version_date', { withTimezone: true }), // Extracted from filename/content
+  versionString: varchar('version_string', { length: 50 }), // "v2.3", "Rev 5", if available
+  isCurrent: boolean('is_current').default(true), // True if latest version
+  versionStatus: versionStatusEnum('version_status').default('current'), // current | archived | superseded | draft
+  supersededBy: uuid('superseded_by'), // document_id of newer version
+  supersedes: uuid('supersedes'), // document_id of older version
+
+  // Compliance & Certifications
+  complianceTypes: jsonb('compliance_types').default([]), // ["REACH", "Halal", "Vegan", "GMO-Free", "Kosher"]
+  certificationBodies: jsonb('certification_bodies').default([]), // ["ISO", "FSSC22000", "BPJPH", "MUI", "HACCP"]
+  regulatoryRegions: jsonb('regulatory_regions').default([]), // ["EU", "US", "ASEAN", "Global", "Thailand"]
+  expiryDate: timestamp('expiry_date', { withTimezone: true }), // For time-limited certificates
+  issueDate: timestamp('issue_date', { withTimezone: true }), // Certificate issue date
+  certificationNumber: varchar('certification_number', { length: 100 }), // Cert ID (e.g., "BPJPH-12345")
+
+  // Content Properties
+  language: varchar('language', { length: 10 }).default('en'), // ISO 639-1: "en", "th", "zh"
+  languagesDetected: jsonb('languages_detected').default([]), // For multi-language docs: ["en", "th"]
+  hasImages: boolean('has_images').default(false),
+  hasTables: boolean('has_tables').default(false),
+  hasChemicalFormulas: boolean('has_chemical_formulas').default(false),
+  hasDiagrams: boolean('has_diagrams').default(false),
+  pageCount: integer('page_count'),
+  wordCount: integer('word_count'),
+
+  // Processing Metadata
+  extractionMethod: extractionMethodEnum('extraction_method').default('docling'), // "docling" | "mistral_ocr" | "manual" | "hybrid"
+  ocrConfidence: integer('ocr_confidence'), // 0-100 (if OCR was used)
+  ocrQualityFlags: jsonb('ocr_quality_flags').default([]), // ["low_confidence_tables", "skewed_text"]
+  processedDate: timestamp('processed_date', { withTimezone: true }), // When vectorization completed
+  processingDurationMs: integer('processing_duration_ms'), // Time taken to process
+  textLength: integer('text_length'), // Character count
+  tokenCount: integer('token_count'), // Estimated tokens (for chunking decisions)
+
+  // Search Optimization
+  keywords: jsonb('keywords').default([]), // Extracted: ["menthol", "cooling", "mint", "natural"]
+  casNumbers: jsonb('cas_numbers').default([]), // All CAS numbers found: ["89-78-1", "1490-04-6"]
+  inciNames: jsonb('inci_names').default([]), // All INCI names: ["MENTHOL", "MENTHYL LACTATE"]
+  allergens: jsonb('allergens').default([]), // Detected allergens: ["tree nuts", "none"]
+  ecNumbers: jsonb('ec_numbers').default([]), // EC Numbers: ["201-939-0"]
+  chemicalNames: jsonb('chemical_names').default([]), // ["L-Menthol", "2-Isopropyl-5-methylcyclohexanol"]
+
+  // Business Context
+  productApplications: jsonb('product_applications').default([]), // ["skincare", "haircare", "oral_care", "fragrance"]
+  functionCategories: jsonb('function_categories').default([]), // ["cooling_agent", "fragrance", "antimicrobial"]
+  cosmeticCategories: jsonb('cosmetic_categories').default([]), // ["leave_on", "rinse_off", "color_cosmetics"]
+  batchNumbers: jsonb('batch_numbers').default([]), // From COA: ["20C05A05a", "2024031001"]
+  lotNumbers: jsonb('lot_numbers').default([]), // Alternative to batch_numbers
+
+  // Quality Flags & Validation
+  qualityScore: integer('quality_score'), // 0-100 composite score
+  qualityDimensions: jsonb('quality_dimensions').default({}), // {ocr_confidence: 95, metadata_completeness: 80, ...}
+  isDuplicate: boolean('is_duplicate').default(false),
+  duplicateOf: uuid('duplicate_of'), // document_id of canonical version
+  duplicateReason: varchar('duplicate_reason', { length: 100 }), // "identical_hash" | "semantic_similarity"
+  requiresReview: boolean('requires_review').default(false), // Flag for manual QA
+  reviewNotes: text('review_notes'), // Admin notes
+  validationStatus: validationStatusEnum('validation_status').default('pending'), // verified | pending | failed | auto_validated
+
+  // Custom Flags & Notes
+  isDiscontinued: boolean('is_discontinued').default(false), // Product no longer available
+  discontinuationDate: timestamp('discontinuation_date', { withTimezone: true }),
+  specialNotes: text('special_notes'), // From folder names, Thai text, etc.
+  internalNotes: text('internal_notes'), // Private notes (not searchable)
+
+  // Technical Specifications (for Spec docs) - stored as JSONB for flexibility
+  specifications: jsonb('specifications').default({}), // {appearance: "white powder", purity: "≥ 99.5%", ...}
+
+  // Timestamps
+  indexedAt: timestamp('indexed_at', { withTimezone: true }), // When added to vector DB
+  lastAccessed: timestamp('last_accessed', { withTimezone: true }), // For usage analytics
+}, (table) => ({
+  // Add indexes for common query patterns
+  supplierIdx: index('idx_documents_supplier').on(table.supplierNormalized),
+  ingredientIdx: index('idx_documents_ingredient').on(table.ingredientNormalized),
+  ragDocTypeIdx: index('idx_documents_rag_type').on(table.ragDocumentType),
+  isCurrentIdx: index('idx_documents_current').on(table.isCurrent),
+  versionStatusIdx: index('idx_documents_version_status').on(table.versionStatus),
+  googleDriveIdx: index('idx_documents_gdrive_file').on(table.googleDriveFileId),
+  complianceIdx: index('idx_documents_compliance').on(table.complianceTypes),
+  duplicateIdx: index('idx_documents_duplicate').on(table.isDuplicate),
+  qualityIdx: index('idx_documents_quality').on(table.qualityScore),
+}));
 
 // Document Chunks table (for vector embeddings)
 export const documentChunks = pgTable('document_chunks', {
@@ -92,7 +223,7 @@ export const documentChunks = pgTable('document_chunks', {
   documentId: uuid('document_id').notNull().references(() => documents.id, { onDelete: 'cascade' }),
   chunkIndex: integer('chunk_index').notNull(),
   content: text('content').notNull(),
-  embedding: vector('embedding', { dimensions: 512 }), // Optimized 512-dimension for Titan v2
+  embedding: vector('embedding', { dimensions: 1024 }), // AWS Titan v2 embeddings with 1024 dimensions
   metadata: jsonb('metadata'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 }, (table) => ({
@@ -1049,6 +1180,29 @@ export const developerPortalUsers = pgTable('developer_portal_users', {
   developerUsageIndex: index('idx_developers_usage').on(table.expectedUsage),
 }));
 
+// Widget Analytics Events table
+export const widgetAnalyticsEvents = pgTable('widget_analytics_events', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  chatbotId: uuid('chatbot_id').notNull().references(() => chatbotInstances.id, { onDelete: 'cascade' }),
+  sessionId: varchar('session_id', { length: 255 }).notNull(),
+  eventType: varchar('event_type', { length: 50 }).notNull(), // 'widget_load', 'chat_open', 'message_sent', etc.
+  userId: varchar('user_id', { length: 255 }),
+  userIdentifier: varchar('user_identifier', { length: 255 }),
+  domain: varchar('domain', { length: 255 }).notNull(),
+  pageUrl: text('page_url').notNull(),
+  referrer: text('referrer'),
+  userAgent: text('user_agent'),
+  ipAddress: varchar('ip_address', { length: 45 }),
+  eventData: jsonb('event_data').default({}),
+  timestamp: timestamp('timestamp', { withTimezone: true }).defaultNow().notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  widgetAnalyticsChatbotIndex: index('idx_widget_analytics_chatbot').on(table.chatbotId, table.timestamp),
+  widgetAnalyticsSessionIndex: index('idx_widget_analytics_session').on(table.sessionId, table.timestamp),
+  widgetAnalyticsEventTypeIndex: index('idx_widget_analytics_event_type').on(table.eventType, table.timestamp),
+  widgetAnalyticsDomainIndex: index('idx_widget_analytics_domain').on(table.domain, table.timestamp),
+}));
+
 // TypeScript types for Public API framework
 export type ApiUsage = typeof apiUsage.$inferSelect;
 export type NewApiUsage = typeof apiUsage.$inferInsert;
@@ -1064,3 +1218,7 @@ export type NewApiDocumentationVersion = typeof apiDocumentationVersions.$inferI
 
 export type DeveloperPortalUser = typeof developerPortalUsers.$inferSelect;
 export type NewDeveloperPortalUser = typeof developerPortalUsers.$inferInsert;
+
+// Widget Analytics types
+export type WidgetAnalyticsEvent = typeof widgetAnalyticsEvents.$inferSelect;
+export type NewWidgetAnalyticsEvent = typeof widgetAnalyticsEvents.$inferInsert;

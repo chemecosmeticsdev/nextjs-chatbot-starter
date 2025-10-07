@@ -14,10 +14,9 @@ import {
   ConversationResponse,
   MessageResponse
 } from '@/lib/validation/conversation';
-import { ChatbotKnowledgeIntegration } from './chatbot-knowledge-integration';
+import { claudeAgentService, ConversationContext } from '../agents/claude-agent-service';
 import { ActivityTracker } from './activity-tracker';
 import { eq, and, desc, gte, lte, count, sql } from 'drizzle-orm';
-import type { ChatContext, EnhancedChatResponse } from './chatbot-knowledge-integration';
 
 export class ConversationService {
   /**
@@ -125,17 +124,22 @@ export class ConversationService {
 
       // Format conversation history for context
       const conversationHistory = recentMessages.reverse().map(msg => ({
-        role: msg.role as 'user' | 'assistant',
+        role: msg.role as 'user' | 'assistant' | 'system',
         content: msg.content,
-        timestamp: msg.createdAt
+        timestamp: msg.createdAt.toISOString()
       }));
 
-      // Build chat context
-      const chatContext: ChatContext = {
-        userId,
-        sessionId: conversation.sessionId,
+      // Build conversation context for Claude Agent
+      const conversationContext: ConversationContext = {
         chatbotId: conversation.chatbotId,
-        conversationHistory
+        sessionId: conversation.sessionId,
+        userId,
+        conversationHistory,
+        metadata: {
+          language: 'auto',
+          businessContext: 'cosmetic_ingredients',
+          ...request.metadata
+        }
       };
 
       // Save user message
@@ -157,24 +161,15 @@ export class ConversationService {
         );
       }
 
-      // Prepare knowledge base configuration
-      const knowledgeConfig = {
-        searchThreshold: chatbotConfig.configuration?.knowledgeBase?.searchThreshold || 0.7,
-        maxSearchResults: chatbotConfig.configuration?.knowledgeBase?.maxSearchResults || 5,
-        enableKnowledgeBase: request.useKnowledgeBase &&
-          (chatbotConfig.configuration?.knowledgeBase?.enableKnowledgeBase !== false),
-        knowledgeSourceFilters: {
-          ...chatbotConfig.configuration?.knowledgeBase?.knowledgeSourceFilters,
-          ...request.knowledgeFilters
-        }
-      };
-
-      // Generate enhanced response using knowledge base integration
-      const enhancedResponse: EnhancedChatResponse = await ChatbotKnowledgeIntegration.generateEnhancedResponse(
+      // Generate response using Claude Agent SDK
+      const agentResponse = await claudeAgentService.processMessage(
         request.content,
-        knowledgeConfig,
-        chatContext,
-        chatbotConfig.systemPrompt || undefined
+        conversationContext,
+        {
+          systemPrompt: chatbotConfig.systemPrompt || undefined,
+          enableVectorSearch: request.useKnowledgeBase !== false,
+          temperature: 0.7
+        }
       );
 
       // Save assistant message
@@ -183,13 +178,15 @@ export class ConversationService {
         .values({
           conversationId,
           role: 'assistant',
-          content: enhancedResponse.response,
+          content: agentResponse.content,
           metadata: {
-            responseTime: enhancedResponse.responseTime,
-            knowledgeUsed: enhancedResponse.knowledgeUsed,
-            searchQuery: enhancedResponse.searchQuery
+            responseTime: agentResponse.metadata.responseTime,
+            tokenUsage: agentResponse.metadata.tokenUsage,
+            model: agentResponse.metadata.model,
+            temperature: agentResponse.metadata.temperature,
+            language: agentResponse.metadata.language
           },
-          vectorSearchResults: enhancedResponse.sourceDocuments || []
+          vectorSearchResults: agentResponse.metadata.vectorSearchResults || []
         })
         .returning();
 
@@ -197,19 +194,19 @@ export class ConversationService {
       if (conversation.integrationType !== 'playground') {
         await ActivityTracker.trackMessageReceived(
           conversation.sessionId,
-          enhancedResponse.response,
-          enhancedResponse.responseTime,
-          enhancedResponse.knowledgeUsed,
-          enhancedResponse.sourceDocuments
+          agentResponse.content,
+          agentResponse.metadata.responseTime,
+          (agentResponse.metadata.vectorSearchResults?.length || 0) > 0,
+          agentResponse.metadata.vectorSearchResults || []
         );
 
         // Track knowledge search if used
-        if (enhancedResponse.knowledgeUsed && enhancedResponse.searchQuery) {
+        if (agentResponse.metadata.vectorSearchResults && agentResponse.metadata.vectorSearchResults.length > 0) {
           await ActivityTracker.trackKnowledgeSearch(
             conversation.sessionId,
-            enhancedResponse.searchQuery,
-            enhancedResponse.sourceDocuments?.length || 0,
-            enhancedResponse.responseTime
+            request.content, // Use original query as search query
+            agentResponse.metadata.vectorSearchResults.length,
+            agentResponse.metadata.responseTime
           );
         }
       }
@@ -222,7 +219,7 @@ export class ConversationService {
 
       return {
         userMessage: this.formatMessageResponse(userMessage),
-        assistantMessage: this.formatMessageResponse(assistantMessage, enhancedResponse)
+        assistantMessage: this.formatMessageResponse(assistantMessage, agentResponse)
       };
 
     } catch (error) {
@@ -580,7 +577,7 @@ export class ConversationService {
 
   private static formatMessageResponse(
     message: any,
-    enhancedResponse?: EnhancedChatResponse
+    agentResponse?: any
   ): MessageResponse {
     const response: MessageResponse = {
       id: message.id,
@@ -592,11 +589,11 @@ export class ConversationService {
       createdAt: message.createdAt.toISOString()
     };
 
-    // Add enhanced response data if available
-    if (enhancedResponse) {
-      response.knowledgeUsed = enhancedResponse.knowledgeUsed;
-      response.sourceDocuments = enhancedResponse.sourceDocuments;
-      response.responseTime = enhancedResponse.responseTime;
+    // Add agent response data if available
+    if (agentResponse && agentResponse.metadata) {
+      response.knowledgeUsed = (agentResponse.metadata.vectorSearchResults?.length || 0) > 0;
+      response.sourceDocuments = agentResponse.metadata.vectorSearchResults;
+      response.responseTime = agentResponse.metadata.responseTime;
     }
 
     return response;

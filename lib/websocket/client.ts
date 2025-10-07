@@ -13,6 +13,7 @@ import {
 export interface WebSocketClientConfig {
   url: string;
   token: string;
+  userId?: string;
   autoReconnect: boolean;
   maxReconnectAttempts: number;
   reconnectInterval: number;
@@ -130,7 +131,10 @@ export class WebSocketClient {
       conversationId,
       content,
       metadata
-    }, { chatbotId });
+    }, {
+      chatbotId,
+      userId: this.config.userId
+    });
 
     // Validate message before sending
     try {
@@ -149,6 +153,8 @@ export class WebSocketClient {
     const message = createWebSocketMessage(WebSocketMessageType.JOIN_ROOM, {
       roomId,
       roomType
+    }, {
+      userId: this.config.userId
     });
 
     try {
@@ -315,14 +321,24 @@ export class WebSocketClient {
       return;
     }
 
+    // Prevent multiple simultaneous reconnection attempts
+    if (this.reconnectTimeout) {
+      return;
+    }
+
     this.reconnectAttempts++;
-    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts - 1), 30000); // Exponential backoff, max 30s
+    const delay = Math.min(2000 * Math.pow(2, this.reconnectAttempts - 1), 60000); // Slower exponential backoff, max 60s
 
     console.log(`Scheduling reconnection attempt ${this.reconnectAttempts} in ${delay}ms`);
 
     this.reconnectTimeout = setTimeout(() => {
       console.log(`Reconnection attempt ${this.reconnectAttempts}`);
-      this.connect();
+      this.reconnectTimeout = null;
+
+      // Only reconnect if we're not already connected
+      if (this.state !== WebSocketConnectionState.CONNECTED && this.state !== WebSocketConnectionState.CONNECTING) {
+        this.connect();
+      }
     }, delay);
   }
 
@@ -367,11 +383,42 @@ export class WebSocketClient {
  */
 export function createWebSocketClient(
   token: string,
-  events: WebSocketClientEvents = {}
+  events: WebSocketClientEvents = {},
+  userId?: string
 ): WebSocketClient {
+  // Environment-aware WebSocket URL construction
+  const isDevelopment = process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost';
+
+  let wsUrl: string;
+
+  if (isDevelopment) {
+    // Development: Use localhost with dedicated WebSocket port
+    wsUrl = `ws://localhost:3001/api/ws`;
+  } else {
+    // Production: Use environment variable or construct from current host
+    const wsBaseUrl = process.env.NEXT_PUBLIC_WS_URL ||
+                     (typeof window !== 'undefined' ? window.location.origin : '');
+
+    if (wsBaseUrl) {
+      // Replace http/https with ws/wss and add WebSocket path
+      const wsProtocol = wsBaseUrl.startsWith('https') ? 'wss:' : 'ws:';
+      const wsHost = wsBaseUrl.replace(/^https?:\/\//, '');
+
+      // For production, use standard ports without explicit port numbers
+      wsUrl = `${wsProtocol}//${wsHost}/api/ws`;
+    } else {
+      // Fallback to current window location (backward compatibility)
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.hostname;
+      const port = window.location.port ? `:${window.location.port}` : '';
+      wsUrl = `${protocol}//${host}${port}/api/ws`;
+    }
+  }
+
   const config: WebSocketClientConfig = {
-    url: `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/api/ws`,
+    url: wsUrl,
     token,
+    userId,
     autoReconnect: true,
     maxReconnectAttempts: 5,
     reconnectInterval: 1000,

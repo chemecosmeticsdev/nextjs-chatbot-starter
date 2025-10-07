@@ -90,6 +90,28 @@ export async function GET(
       updatedAt: document.updatedAt,
       chunkCount: chunkInfo.count,
       processingDetails: processingStatus,
+      // Structured metadata fields
+      supplierName: document.supplierName,
+      supplierNormalized: document.supplierNormalized,
+      supplierCountry: document.supplierCountry,
+      ingredientName: document.ingredientName,
+      ingredientNormalized: document.ingredientNormalized,
+      ingredientInciName: document.ingredientInciName,
+      ingredientCasNumber: document.ingredientCasNumber,
+      ragDocumentType: document.ragDocumentType,
+      documentSubtype: document.documentSubtype,
+      complianceTypes: document.complianceTypes,
+      certificationBodies: document.certificationBodies,
+      regulatoryRegions: document.regulatoryRegions,
+      keywords: document.keywords,
+      casNumbers: document.casNumbers,
+      inciNames: document.inciNames,
+      allergens: document.allergens,
+      qualityScore: document.qualityScore,
+      validationStatus: document.validationStatus,
+      language: document.language,
+      pageCount: document.pageCount,
+      wordCount: document.wordCount,
       ...(includeContent && { content: document.content, extractedText: document.extractedText }),
       ...(includeChunks && { chunks })
     };
@@ -188,25 +210,50 @@ export async function PUT(
         break;
 
       case 'update_metadata':
-        // Update document metadata
+        // Update document metadata (both basic JSONB metadata and structured fields)
         const updatedMetadata = {
           ...existingDocument.metadata,
           ...updateData.metadata
         };
 
+        // Prepare update object with both basic metadata and structured fields
+        const updateFields: any = {
+          metadata: updatedMetadata,
+          updatedAt: new Date()
+        };
+
+        // Add structured metadata fields if provided
+        if (updateData.supplierName !== undefined) updateFields.supplierName = updateData.supplierName;
+        if (updateData.supplierNormalized !== undefined) updateFields.supplierNormalized = updateData.supplierNormalized;
+        if (updateData.supplierCountry !== undefined) updateFields.supplierCountry = updateData.supplierCountry;
+        if (updateData.ingredientName !== undefined) updateFields.ingredientName = updateData.ingredientName;
+        if (updateData.ingredientNormalized !== undefined) updateFields.ingredientNormalized = updateData.ingredientNormalized;
+        if (updateData.ingredientInciName !== undefined) updateFields.ingredientInciName = updateData.ingredientInciName;
+        if (updateData.ingredientCasNumber !== undefined) updateFields.ingredientCasNumber = updateData.ingredientCasNumber;
+        if (updateData.ragDocumentType !== undefined) updateFields.ragDocumentType = updateData.ragDocumentType;
+        if (updateData.documentSubtype !== undefined) updateFields.documentSubtype = updateData.documentSubtype;
+        if (updateData.complianceTypes !== undefined) updateFields.complianceTypes = updateData.complianceTypes;
+        if (updateData.certificationBodies !== undefined) updateFields.certificationBodies = updateData.certificationBodies;
+        if (updateData.regulatoryRegions !== undefined) updateFields.regulatoryRegions = updateData.regulatoryRegions;
+        if (updateData.keywords !== undefined) updateFields.keywords = updateData.keywords;
+        if (updateData.casNumbers !== undefined) updateFields.casNumbers = updateData.casNumbers;
+        if (updateData.inciNames !== undefined) updateFields.inciNames = updateData.inciNames;
+        if (updateData.allergens !== undefined) updateFields.allergens = updateData.allergens;
+        if (updateData.qualityScore !== undefined) updateFields.qualityScore = updateData.qualityScore;
+        if (updateData.validationStatus !== undefined) updateFields.validationStatus = updateData.validationStatus;
+        if (updateData.language !== undefined) updateFields.language = updateData.language;
+
         await db
           .update(documents)
-          .set({
-            metadata: updatedMetadata,
-            updatedAt: new Date()
-          })
+          .set(updateFields)
           .where(eq(documents.id, documentId));
 
         result = {
           action: 'update_metadata',
           success: true,
           message: 'Document metadata updated successfully',
-          updatedMetadata
+          updatedMetadata,
+          updatedFields: Object.keys(updateFields).filter(key => key !== 'updatedAt')
         };
         break;
 
