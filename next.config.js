@@ -91,6 +91,11 @@ const nextConfig = {
     NEXT_PUBLIC_COGNITO_USER_POOL_ID: process.env.COGNITO_USER_POOL_ID,
     NEXT_PUBLIC_COGNITO_CLIENT_ID: process.env.COGNITO_CLIENT_ID,
     NEXT_PUBLIC_COGNITO_REGION: process.env.COGNITO_REGION,
+    // AWS Amplify Production Configuration
+    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+    S3_DOCUMENT_BUCKET: process.env.S3_DOCUMENT_BUCKET,
+    JWT_SECRET: process.env.JWT_SECRET,
+    MISTRAL_API_KEY: process.env.MISTRAL_API_KEY,
   },
 }
 
