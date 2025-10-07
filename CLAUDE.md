@@ -42,6 +42,43 @@ Key environment variables are configured in `.env.local`:
 
 **IMPORTANT**: Never modify credentials in .env.local - only read existing values or add new lines.
 
+## Neon Database Configuration
+
+**CRITICAL**: Always use the correct Neon project to avoid data integrity issues.
+
+### Correct Project Details:
+- **Project ID**: `orange-credit-10889790`
+- **Project Name**: "cloudshell-chatbot"
+- **Database URL**: Points to `ep-polished-band-a1rdok0t-pooler.ap-southeast-1.aws.neon.tech`
+- **Default Branch**: `br-muddy-king-a1la4k1e`
+
+### MCP Neon Tools Usage:
+**ALWAYS specify the correct projectId when using Neon MCP tools:**
+```javascript
+// Correct usage - always specify projectId
+mcp__neon__run_sql({
+  sql: "SELECT * FROM table",
+  projectId: "orange-credit-10889790"
+})
+
+// WRONG - letting MCP auto-select project can connect to wrong database
+mcp__neon__run_sql({ sql: "SELECT * FROM table" })
+```
+
+### Available Projects (DO NOT USE):
+- `old-unit-76511442` ("chatbot") - Wrong project, do not use
+- `plain-glade-58968287` ("langchain-aws") - Different application
+
+### Database Schema:
+The correct database contains these tables:
+- `system_settings` - Admin configuration settings
+- `users` - User management
+- `documents` - Document storage metadata
+- `document_chunks` - Vector embeddings
+- `activity_logs` - Audit trails
+- `products`, `suppliers` - Business data
+- `search_queries`, `search_results_cache` - Search functionality
+
 ## Specialized Agents
 
 The project is configured to leverage specialized Claude Code agents:
@@ -58,6 +95,15 @@ The project is configured to leverage specialized Claude Code agents:
 - AWS Bedrock Nova Micro is the default LLM model
 - GitHub integration enables automatic deployment via AWS Amplify
 - Database operations should utilize Neon's PostgreSQL capabilities for both vector and relational data
+
+### Database Layer Architecture
+
+- **Drizzle ORM**: Used for all regular database operations (CRUD, transactions, schema management)
+  - Type-safe database operations with full TypeScript support
+  - Connection pooling and SSL configuration handled automatically
+  - Located in `lib/db/` directory with modular services
+- **Direct SQL**: Reserved exclusively for vector similarity searches and performance-critical operations
+- **Schema Management**: All database schemas defined in `lib/db/schema.ts` with proper TypeScript types
 
 ## Development Workflow
 

@@ -1,0 +1,731 @@
+API Schema
+1. Authentication Endpoints
+yaml
+# Authentication
+POST   /api/v1/auth/login
+POST   /api/v1/auth/logout
+POST   /api/v1/auth/refresh
+GET    /api/v1/auth/me
+2. User Management
+yaml
+# Users
+GET    /api/v1/users                    # List users (admin only)
+POST   /api/v1/users                    # Create user (admin only)
+GET    /api/v1/users/{userId}           # Get user details
+PUT    /api/v1/users/{userId}           # Update user
+DELETE /api/v1/users/{userId}           # Delete user (admin only)
+3. Document Management
+yaml
+# INCI Documents
+GET    /api/v1/documents/inci           # List INCI documents
+POST   /api/v1/documents/inci           # Upload INCI document
+GET    /api/v1/documents/inci/{docId}   # Get INCI document details
+DELETE /api/v1/documents/inci/{docId}   # Delete INCI document
+
+# Formulation Documents
+GET    /api/v1/documents/formulation    # List formulation documents
+POST   /api/v1/documents/formulation    # Upload formulation document
+GET    /api/v1/documents/formulation/{docId}  # Get formulation document details
+DELETE /api/v1/documents/formulation/{docId}  # Delete formulation document
+
+# Document Processing Status
+GET    /api/v1/documents/{docId}/status # Get processing status
+GET    /api/v1/documents/{docId}/chunks # Get document chunks
+4. Product & Supplier Management
+yaml
+# Suppliers
+GET    /api/v1/suppliers                # List suppliers
+POST   /api/v1/suppliers                # Create supplier
+GET    /api/v1/suppliers/{supplierId}   # Get supplier details
+PUT    /api/v1/suppliers/{supplierId}   # Update supplier
+DELETE /api/v1/suppliers/{supplierId}   # Delete supplier
+
+# Products
+GET    /api/v1/products                 # List products
+POST   /api/v1/products                 # Create product
+GET    /api/v1/products/{productId}     # Get product details
+PUT    /api/v1/products/{productId}     # Update product
+DELETE /api/v1/products/{productId}     # Delete product
+5. Search & Query
+yaml
+# Vector Search
+POST   /api/v1/search/similarity        # Perform similarity search
+GET    /api/v1/search/history           # Get search history
+GET    /api/v1/search/cache/{queryHash} # Get cached result
+6. System Management
+yaml
+# Settings (Admin only)
+GET    /api/v1/settings                 # Get all settings
+PUT    /api/v1/settings/{key}           # Update setting value
+POST   /api/v1/settings                 # Create new setting
+
+# Activity Logs
+GET    /api/v1/activities               # List activities
+GET    /api/v1/activities/stats         # Get activity statistics
+7. Detailed Request/Response Examples
+Upload INCI Document
+json
+POST /api/v1/documents/inci
+Content-Type: multipart/form-data
+
+{
+  "file": <binary>,
+  "productId": "uuid",
+  "documentType": "safety", // safety, certification, compliance, etc.
+  "metadata": {
+    "inciName": "Glycerin",
+    "supplier": "Supplier ABC",
+    "version": "2.1",
+    "tags": ["moisturizer", "humectant"]
+  }
+}
+
+Response:
+{
+  "documentId": "uuid",
+  "status": "processing",
+  "uploadedAt": "2024-01-01T00:00:00Z",
+  "processingSteps": {
+    "upload": "completed",
+    "ocr": "pending",
+    "chunking": "pending",
+    "embedding": "pending",
+    "indexing": "pending"
+  }
+}
+Similarity Search
+json
+POST /api/v1/search/similarity
+{
+  "query": "What are the safety considerations for using glycerin in sunscreen?",
+  "documentTypes": ["inci", "formulation"],
+  "filters": {
+    "productIds": ["uuid1", "uuid2"],
+    "documentCategories": ["safety", "formulation"],
+    "dateRange": {
+      "from": "2023-01-01",
+      "to": "2024-01-01"
+    }
+  },
+  "limit": 10,
+  "similarityThreshold": 0.7
+}
+
+Response:
+{
+  "queryId": "uuid",
+  "results": [
+    {
+      "documentId": "uuid",
+      "chunkId": "uuid",
+      "similarity": 0.89,
+      "content": "Glycerin is generally considered safe...",
+      "metadata": {
+        "documentType": "safety",
+        "productName": "Glycerin USP",
+        "page": 5
+      }
+    }
+  ],
+  "totalResults": 10,
+  "processingTime": 145,
+  "cached": false
+}
+SQL Schema
+sql
+-- Enable UUID extension
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+CREATE EXTENSION IF NOT EXISTS "vector";
+
+-- User roles enum
+CREATE TYPE user_role AS ENUM ('super_admin', 'admin', 'user');
+
+-- Document types enum
+CREATE TYPE document_category AS ENUM (
+  'information',
+  'promotional',
+  'scientific',
+  'standard_testing_compliance',
+  'certification',
+  'safety_regulation',
+  'other'
+);
+
+-- Document type enum
+CREATE TYPE document_type AS ENUM ('inci', 'formulation');
+
+-- Processing status enum
+CREATE TYPE processing_status AS ENUM (
+  'pending',
+  'processing',
+  'completed',
+  'failed'
+);
+
+-- Activity type enum
+CREATE TYPE activity_type AS ENUM (
+  'document_upload',
+  'document_delete',
+  'ocr_processing',
+  'embedding_generation',
+  'vector_indexing',
+  'similarity_search',
+  'user_login',
+  'setting_update'
+);
+
+-- Users table
+CREATE TABLE users (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  full_name VARCHAR(255) NOT NULL,
+  role user_role DEFAULT 'user',
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  last_login_at TIMESTAMP WITH TIME ZONE
+);
+
+-- Suppliers table
+CREATE TABLE suppliers (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name VARCHAR(255) UNIQUE NOT NULL,
+  code VARCHAR(50) UNIQUE,
+  contact_email VARCHAR(255),
+  contact_phone VARCHAR(50),
+  address TEXT,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Products table
+CREATE TABLE products (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  supplier_id UUID REFERENCES suppliers(id) ON DELETE CASCADE,
+  inci_name VARCHAR(255) NOT NULL,
+  trade_name VARCHAR(255),
+  cas_number VARCHAR(50),
+  einecs_number VARCHAR(50),
+  description TEXT,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(supplier_id, inci_name)
+);
+
+-- Documents table
+CREATE TABLE documents (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  product_id UUID REFERENCES products(id) ON DELETE CASCADE,
+  uploaded_by UUID REFERENCES users(id),
+  document_type document_type NOT NULL,
+  document_category document_category NOT NULL,
+  original_filename VARCHAR(255) NOT NULL,
+  file_path VARCHAR(500) NOT NULL,
+  file_size_bytes BIGINT,
+  mime_type VARCHAR(100),
+  metadata JSONB DEFAULT '{}',
+  processing_status processing_status DEFAULT 'pending',
+  processing_error TEXT,
+  ocr_completed_at TIMESTAMP WITH TIME ZONE,
+  embedding_completed_at TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  deleted_at TIMESTAMP WITH TIME ZONE
+);
+
+-- Document chunks table
+CREATE TABLE document_chunks (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  document_id UUID REFERENCES documents(id) ON DELETE CASCADE,
+  chunk_index INTEGER NOT NULL,
+  content TEXT NOT NULL,
+  metadata JSONB DEFAULT '{}',
+  embedding vector(1536), -- Assuming OpenAI embeddings dimension
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(document_id, chunk_index)
+);
+
+-- Formulation documents table (for non-product specific documents)
+CREATE TABLE formulation_documents (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  uploaded_by UUID REFERENCES users(id),
+  formulation_type VARCHAR(100), -- sunscreen, serum, lotion, etc.
+  title VARCHAR(255) NOT NULL,
+  description TEXT,
+  original_filename VARCHAR(255) NOT NULL,
+  file_path VARCHAR(500) NOT NULL,
+  file_size_bytes BIGINT,
+  mime_type VARCHAR(100),
+  metadata JSONB DEFAULT '{}',
+  processing_status processing_status DEFAULT 'pending',
+  processing_error TEXT,
+  ocr_completed_at TIMESTAMP WITH TIME ZONE,
+  embedding_completed_at TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  deleted_at TIMESTAMP WITH TIME ZONE
+);
+
+-- Formulation chunks table
+CREATE TABLE formulation_chunks (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  formulation_document_id UUID REFERENCES formulation_documents(id) ON DELETE CASCADE,
+  chunk_index INTEGER NOT NULL,
+  content TEXT NOT NULL,
+  metadata JSONB DEFAULT '{}',
+  embedding vector(1536),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(formulation_document_id, chunk_index)
+);
+
+-- Search queries table (for caching)
+CREATE TABLE search_queries (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  query_hash VARCHAR(64) UNIQUE NOT NULL, -- SHA256 hash of query + filters
+  query_text TEXT NOT NULL,
+  query_embedding vector(1536),
+  filters JSONB DEFAULT '{}',
+  user_id UUID REFERENCES users(id),
+  result_count INTEGER,
+  processing_time_ms INTEGER,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Search results cache table
+CREATE TABLE search_results_cache (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  query_id UUID REFERENCES search_queries(id) ON DELETE CASCADE,
+  document_chunk_id UUID,
+  formulation_chunk_id UUID,
+  similarity_score FLOAT NOT NULL,
+  rank INTEGER NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  expires_at TIMESTAMP WITH TIME ZONE,
+  CHECK (
+    (document_chunk_id IS NOT NULL AND formulation_chunk_id IS NULL) OR
+    (document_chunk_id IS NULL AND formulation_chunk_id IS NOT NULL)
+  )
+);
+
+-- System settings table
+CREATE TABLE system_settings (
+  key VARCHAR(100) PRIMARY KEY,
+  value JSONB NOT NULL,
+  description TEXT,
+  is_public BOOLEAN DEFAULT false,
+  updated_by UUID REFERENCES users(id),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Activity logs table
+CREATE TABLE activity_logs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES users(id),
+  activity_type activity_type NOT NULL,
+  entity_type VARCHAR(50),
+  entity_id UUID,
+  description TEXT,
+  metadata JSONB DEFAULT '{}',
+  ip_address INET,
+  user_agent TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes for performance
+CREATE INDEX idx_documents_product_id ON documents(product_id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_documents_uploaded_by ON documents(uploaded_by);
+CREATE INDEX idx_documents_processing_status ON documents(processing_status);
+CREATE INDEX idx_document_chunks_document_id ON document_chunks(document_id);
+CREATE INDEX idx_formulation_documents_uploaded_by ON formulation_documents(uploaded_by);
+CREATE INDEX idx_formulation_chunks_document_id ON formulation_chunks(formulation_document_id);
+CREATE INDEX idx_search_queries_user_id ON search_queries(user_id);
+CREATE INDEX idx_search_queries_created_at ON search_queries(created_at);
+CREATE INDEX idx_activity_logs_user_id ON activity_logs(user_id);
+CREATE INDEX idx_activity_logs_created_at ON activity_logs(created_at);
+CREATE INDEX idx_activity_logs_activity_type ON activity_logs(activity_type);
+
+-- Vector similarity search indexes
+CREATE INDEX idx_document_chunks_embedding ON document_chunks 
+  USING ivfflat (embedding vector_cosine_ops)
+  WITH (lists = 100);
+
+CREATE INDEX idx_formulation_chunks_embedding ON formulation_chunks 
+  USING ivfflat (embedding vector_cosine_ops)
+  WITH (lists = 100);
+
+CREATE INDEX idx_search_queries_embedding ON search_queries 
+  USING ivfflat (query_embedding vector_cosine_ops)
+  WITH (lists = 50);
+
+-- Updated at trigger function
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = CURRENT_TIMESTAMP;
+  RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- Apply updated_at triggers
+CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_suppliers_updated_at BEFORE UPDATE ON suppliers
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_products_updated_at BEFORE UPDATE ON products
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_documents_updated_at BEFORE UPDATE ON documents
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_formulation_documents_updated_at BEFORE UPDATE ON formulation_documents
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_system_settings_updated_at BEFORE UPDATE ON system_settings
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Function for similarity search
+CREATE OR REPLACE FUNCTION search_similar_chunks(
+  query_embedding vector(1536),
+  similarity_threshold FLOAT DEFAULT 0.7,
+  max_results INTEGER DEFAULT 10
+)
+RETURNS TABLE (
+  chunk_id UUID,
+  content TEXT,
+  similarity FLOAT,
+  chunk_type VARCHAR(20),
+  document_id UUID,
+  metadata JSONB
+) AS $$
+BEGIN
+  RETURN QUERY
+  WITH combined_results AS (
+    -- Search in document chunks
+    SELECT 
+      dc.id as chunk_id,
+      dc.content,
+      1 - (dc.embedding <=> query_embedding) as similarity,
+      'inci'::VARCHAR(20) as chunk_type,
+      dc.document_id,
+      dc.metadata
+    FROM document_chunks dc
+    WHERE dc.embedding IS NOT NULL
+    
+    UNION ALL
+    
+    
+Claude Opus 4
+continue
+
+
+Thought Process
+expand
+sql
+-- Continue with the similarity search function
+    -- Search in formulation chunks
+    SELECT 
+      fc.id as chunk_id,
+      fc.content,
+      1 - (fc.embedding <=> query_embedding) as similarity,
+      'formulation'::VARCHAR(20) as chunk_type,
+      fc.formulation_document_id as document_id,
+      fc.metadata
+    FROM formulation_chunks fc
+    WHERE fc.embedding IS NOT NULL
+  )
+  SELECT * FROM combined_results
+  WHERE similarity >= similarity_threshold
+  ORDER BY similarity DESC
+  LIMIT max_results;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Additional helper views for easier querying
+CREATE VIEW document_processing_status AS
+SELECT 
+  d.id,
+  d.original_filename,
+  d.document_type,
+  d.document_category,
+  d.processing_status,
+  p.inci_name,
+  p.trade_name,
+  s.name as supplier_name,
+  COUNT(dc.id) as chunk_count,
+  COUNT(dc.embedding) as embedded_chunk_count,
+  d.created_at,
+  d.ocr_completed_at,
+  d.embedding_completed_at
+FROM documents d
+LEFT JOIN products p ON d.product_id = p.id
+LEFT JOIN suppliers s ON p.supplier_id = s.id
+LEFT JOIN document_chunks dc ON d.id = dc.document_id
+WHERE d.deleted_at IS NULL
+GROUP BY d.id, p.inci_name, p.trade_name, s.name;
+
+-- View for formulation document status
+CREATE VIEW formulation_processing_status AS
+SELECT 
+  fd.id,
+  fd.title,
+  fd.formulation_type,
+  fd.processing_status,
+  COUNT(fc.id) as chunk_count,
+  COUNT(fc.embedding) as embedded_chunk_count,
+  fd.created_at,
+  fd.ocr_completed_at,
+  fd.embedding_completed_at
+FROM formulation_documents fd
+LEFT JOIN formulation_chunks fc ON fd.id = fc.formulation_document_id
+WHERE fd.deleted_at IS NULL
+GROUP BY fd.id;
+
+-- Function to clean up expired cache entries
+CREATE OR REPLACE FUNCTION cleanup_expired_cache()
+RETURNS void AS $$
+BEGIN
+  DELETE FROM search_results_cache WHERE expires_at < CURRENT_TIMESTAMP;
+  DELETE FROM search_queries WHERE created_at < CURRENT_TIMESTAMP - INTERVAL '30 days';
+END;
+$$ LANGUAGE plpgsql;
+
+-- Default system settings
+INSERT INTO system_settings (key, value, description, is_public) VALUES
+  ('ocr.provider', '"tesseract"', 'OCR service provider', false),
+  ('ocr.language', '["eng"]', 'OCR languages', false),
+  ('embedding.provider', '"openai"', 'Embedding service provider', false),
+  ('embedding.model', '"text-embedding-ada-002"', 'Embedding model name', false),
+  ('embedding.dimension', '1536', 'Embedding vector dimension', false),
+  ('chunking.max_tokens', '500', 'Maximum tokens per chunk', false),
+  ('chunking.overlap_tokens', '50', 'Overlapping tokens between chunks', false),
+  ('cache.ttl_hours', '24', 'Cache time to live in hours', false),
+  ('search.default_limit', '10', 'Default search result limit', true),
+  ('search.max_limit', '100', 'Maximum search result limit', true);
+
+-- Stored procedure for document upload workflow
+CREATE OR REPLACE FUNCTION process_document_upload(
+  p_document_id UUID,
+  p_status processing_status,
+  p_step VARCHAR(50),
+  p_error TEXT DEFAULT NULL
+)
+RETURNS void AS $$
+DECLARE
+  v_activity_type activity_type;
+BEGIN
+  -- Update document status
+  UPDATE documents 
+  SET 
+    processing_status = p_status,
+    processing_error = p_error,
+    ocr_completed_at = CASE 
+      WHEN p_step = 'ocr' AND p_status = 'completed' THEN CURRENT_TIMESTAMP 
+      ELSE ocr_completed_at 
+    END,
+    embedding_completed_at = CASE 
+      WHEN p_step = 'embedding' AND p_status = 'completed' THEN CURRENT_TIMESTAMP 
+      ELSE embedding_completed_at 
+    END
+  WHERE id = p_document_id;
+  
+  -- Log activity
+  CASE p_step
+    WHEN 'ocr' THEN v_activity_type := 'ocr_processing';
+    WHEN 'embedding' THEN v_activity_type := 'embedding_generation';
+    WHEN 'indexing' THEN v_activity_type := 'vector_indexing';
+  END CASE;
+  
+  INSERT INTO activity_logs (
+    activity_type, 
+    entity_type, 
+    entity_id, 
+    description,
+    metadata
+  ) VALUES (
+    v_activity_type,
+    'document',
+    p_document_id,
+    CONCAT(p_step, ' ', p_status),
+    jsonb_build_object(
+      'status', p_status,
+      'step', p_step,
+      'error', p_error
+    )
+  );
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to get document statistics
+CREATE OR REPLACE FUNCTION get_document_statistics(
+  p_user_id UUID DEFAULT NULL,
+  p_date_from TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+  p_date_to TIMESTAMP WITH TIME ZONE DEFAULT NULL
+)
+RETURNS TABLE (
+  total_documents BIGINT,
+  inci_documents BIGINT,
+  formulation_documents BIGINT,
+  total_chunks BIGINT,
+  total_embedded_chunks BIGINT,
+  documents_by_category JSONB,
+  documents_by_status JSONB,
+  processing_stats JSONB
+) AS $$
+BEGIN
+  RETURN QUERY
+  WITH doc_stats AS (
+    SELECT 
+      COUNT(*) FILTER (WHERE d.deleted_at IS NULL) as total_docs,
+      COUNT(*) FILTER (WHERE d.document_type = 'inci' AND d.deleted_at IS NULL) as inci_docs,
+      COUNT(*) FILTER (WHERE d.processing_status = 'pending') as pending_docs,
+      COUNT(*) FILTER (WHERE d.processing_status = 'processing') as processing_docs,
+      COUNT(*) FILTER (WHERE d.processing_status = 'completed') as completed_docs,
+      COUNT(*) FILTER (WHERE d.processing_status = 'failed') as failed_docs,
+      jsonb_object_agg(
+        d.document_category::text, 
+        COUNT(*) 
+      ) FILTER (WHERE d.deleted_at IS NULL) as category_counts
+    FROM documents d
+    WHERE (p_user_id IS NULL OR d.uploaded_by = p_user_id)
+      AND (p_date_from IS NULL OR d.created_at >= p_date_from)
+      AND (p_date_to IS NULL OR d.created_at <= p_date_to)
+  ),
+  formulation_stats AS (
+    SELECT COUNT(*) as formulation_docs
+    FROM formulation_documents fd
+    WHERE fd.deleted_at IS NULL
+      AND (p_user_id IS NULL OR fd.uploaded_by = p_user_id)
+      AND (p_date_from IS NULL OR fd.created_at >= p_date_from)
+      AND (p_date_to IS NULL OR fd.created_at <= p_date_to)
+  ),
+  chunk_stats AS (
+    SELECT 
+      COUNT(*) as total_chunks,
+      COUNT(embedding) as embedded_chunks
+    FROM (
+      SELECT embedding FROM document_chunks dc
+      JOIN documents d ON dc.document_id = d.id
+      WHERE d.deleted_at IS NULL
+        AND (p_user_id IS NULL OR d.uploaded_by = p_user_id)
+        AND (p_date_from IS NULL OR d.created_at >= p_date_from)
+        AND (p_date_to IS NULL OR d.created_at <= p_date_to)
+      UNION ALL
+      SELECT embedding FROM formulation_chunks fc
+      JOIN formulation_documents fd ON fc.formulation_document_id = fd.id
+      WHERE fd.deleted_at IS NULL
+        AND (p_user_id IS NULL OR fd.uploaded_by = p_user_id)
+        AND (p_date_from IS NULL OR fd.created_at >= p_date_from)
+        AND (p_date_to IS NULL OR fd.created_at <= p_date_to)
+    ) AS all_chunks
+  )
+  SELECT 
+    ds.total_docs + fs.formulation_docs,
+    ds.inci_docs,
+    fs.formulation_docs,
+    cs.total_chunks,
+    cs.embedded_chunks,
+    ds.category_counts,
+    jsonb_build_object(
+      'pending', ds.pending_docs,
+      'processing', ds.processing_docs,
+      'completed', ds.completed_docs,
+      'failed', ds.failed_docs
+    ),
+    jsonb_build_object(
+      'avg_processing_time_minutes', 
+      EXTRACT(EPOCH FROM (
+        AVG(COALESCE(d.embedding_completed_at, d.ocr_completed_at) - d.created_at) 
+        FILTER (WHERE d.processing_status = 'completed')
+      ))/60
+    )
+  FROM doc_stats ds, formulation_stats fs, chunk_stats cs;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Materialized view for faster product search
+CREATE MATERIALIZED VIEW product_document_summary AS
+SELECT 
+  p.id as product_id,
+  p.inci_name,
+  p.trade_name,
+  s.name as supplier_name,
+  COUNT(DISTINCT d.id) as document_count,
+  array_agg(DISTINCT d.document_category::text) as document_categories,
+  COUNT(DISTINCT dc.id) as total_chunks,
+  MAX(d.created_at) as latest_document_date
+FROM products p
+LEFT JOIN suppliers s ON p.supplier_id = s.id
+LEFT JOIN documents d ON p.id = d.product_id AND d.deleted_at IS NULL
+LEFT JOIN document_chunks dc ON d.id = dc.document_id
+WHERE p.is_active = true
+GROUP BY p.id, p.inci_name, p.trade_name, s.name;
+
+-- Create index on materialized view
+CREATE INDEX idx_product_document_summary_inci ON product_document_summary(inci_name);
+
+-- Function to refresh materialized view (call periodically)
+CREATE OR REPLACE FUNCTION refresh_product_summary()
+RETURNS void AS $$
+BEGIN
+  REFRESH MATERIALIZED VIEW CONCURRENTLY product_document_summary;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Row level security policies (if needed)
+ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE formulation_documents ENABLE ROW LEVEL SECURITY;
+
+-- Policy for users to see their own documents
+CREATE POLICY user_documents_policy ON documents
+  FOR ALL
+  USING (uploaded_by = current_setting('app.current_user_id')::uuid OR 
+         EXISTS (SELECT 1 FROM users WHERE id = current_setting('app.current_user_id')::uuid AND role IN ('admin', 'super_admin')));
+
+-- Policy for formulation documents
+CREATE POLICY user_formulation_documents_policy ON formulation_documents
+  FOR ALL
+  USING (uploaded_by = current_setting('app.current_user_id')::uuid OR 
+         EXISTS (SELECT 1 FROM users WHERE id = current_setting('app.current_user_id')::uuid AND role IN ('admin', 'super_admin')));
+Schema Explanations
+Key Design Decisions:
+Separation of INCI and Formulation Documents:
+
+INCI documents are linked to specific products
+Formulation documents are standalone and can reference multiple product types
+Vector Storage:
+
+Using pgvector with 1536 dimensions (OpenAI standard)
+IVFFlat indexes for efficient similarity search
+Separate embedding columns in chunk tables
+Caching Strategy:
+
+Query results are cached with expiration
+Query hash prevents duplicate processing
+Configurable TTL through system settings
+Activity Tracking:
+
+Comprehensive logging of all system activities
+Tracks API calls to external services
+Useful for billing and debugging
+Soft Deletes:
+
+Documents have deleted_at timestamp
+Preserves data integrity and audit trail
+Performance Optimizations:
+
+Materialized view for product summaries
+Appropriate indexes on foreign keys and search fields
+Partitioning ready (can add date-based partitioning on activity_logs)
+Security:
+
+Row-level security policies
+Role-based access control
+Password hashing assumed in application layer
+This schema provides a robust foundation for your B2B cosmetics knowledge base system with efficient vector search capabilities and comprehensive tracking.

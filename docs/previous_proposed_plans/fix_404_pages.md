@@ -37,7 +37,7 @@ Based on my comprehensive analysis of the dashboard structure and codebase, I ca
   3. Logout → Functional ✅ EXISTS
 
   Authentication System:
-  - Uses AWS Cognito with super admin credentials: chemecosmetics.dev@gmail.com / SuperAdmin123!
+  - Uses AWS Cognito with super admin credentials: [ADMIN_EMAIL] / [ADMIN_PASSWORD]
   - Logout functionality calls /api/v1/auth/logout and redirects to /login
   - Session management with JWT tokens
 
@@ -76,7 +76,7 @@ Phase 1: Create Missing Route Structure
     Phase 3: Visual Testing with Playwright
 
     1. Install browser dependencies
-    2. Login with super admin credentials (chemecosmetics.dev@gmail.com)
+    2. Login with super admin credentials ([ADMIN_EMAIL])
     3. Navigate through all menu items systematically:
       - Main navigation items
       - Dropdown submenus  

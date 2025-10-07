@@ -145,4 +145,73 @@ export class UserSyncService {
       await client.end();
     }
   }
+
+  static async getAllUsers(options: {
+    limit?: number;
+    offset?: number;
+    includeInactive?: boolean;
+    searchTerm?: string;
+    roleFilter?: string;
+  } = {}): Promise<{ users: DatabaseUser[]; total: number }> {
+    const client = await this.getDbClient();
+    const { limit = 50, offset = 0, includeInactive = true, searchTerm, roleFilter } = options;
+
+    try {
+      // Build WHERE conditions
+      const conditions: string[] = [];
+      const params: any[] = [];
+      let paramIndex = 1;
+
+      if (!includeInactive) {
+        conditions.push(`is_active = $${paramIndex}`);
+        params.push(true);
+        paramIndex++;
+      }
+
+      if (searchTerm) {
+        conditions.push(`(full_name ILIKE $${paramIndex} OR email ILIKE $${paramIndex})`);
+        params.push(`%${searchTerm}%`);
+        paramIndex++;
+      }
+
+      if (roleFilter) {
+        conditions.push(`role = $${paramIndex}`);
+        params.push(roleFilter);
+        paramIndex++;
+      }
+
+      const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+      // Get total count
+      const countQuery = `
+        SELECT COUNT(*) as total
+        FROM users
+        ${whereClause}
+      `;
+
+      const countResult = await client.query(countQuery, params);
+      const total = parseInt(countResult.rows[0].total);
+
+      // Get users with pagination
+      const usersQuery = `
+        SELECT id, email, full_name, role, is_active, created_at, updated_at, last_login_at
+        FROM users
+        ${whereClause}
+        ORDER BY created_at DESC
+        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+      `;
+
+      const usersResult = await client.query(usersQuery, [...params, limit, offset]);
+
+      return {
+        users: usersResult.rows as DatabaseUser[],
+        total
+      };
+    } catch (error) {
+      console.error('Get all users error:', error);
+      return { users: [], total: 0 };
+    } finally {
+      await client.end();
+    }
+  }
 }

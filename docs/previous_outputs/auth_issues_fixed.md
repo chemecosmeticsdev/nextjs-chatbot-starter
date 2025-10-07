@@ -81,7 +81,7 @@ Authentication Issues Fixed Successfully
 
   1. Start dev server: npm run dev
   2. Visit http://localhost:3000/ → should redirect to /login
-  3. Login with: chemecosmetics.dev@gmail.com / SuperAdmin123!
+  3. Login with: [ADMIN_EMAIL] / [ADMIN_PASSWORD]
   4. Should redirect to /dashboard without TooltipProvider errors
 
   The application now has a fully functional, secure authentication system! 🎉

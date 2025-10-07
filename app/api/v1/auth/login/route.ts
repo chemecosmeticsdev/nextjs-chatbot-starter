@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
         full_name: dbUser.full_name,
         role: dbUser.role,
       },
+      token: sessionToken,
     });
 
     response.cookies.set({
