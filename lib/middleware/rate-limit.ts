@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { RateLimiter, getClientIdentifier, RateLimitResult } from '@/lib/security/rate-limiter';
+import { RateLimiter, getClientIdentifier, RateLimitResult, rateLimiters as securityRateLimiters } from '@/lib/security/rate-limiter';
 import { AuthTokenService } from '@/lib/auth';
 
 export interface RateLimitOptions {
@@ -104,7 +104,7 @@ export function applyRateLimit(rateLimiter: RateLimiter, options?: Partial<RateL
   };
 
   return (handler: (request: NextRequest) => Promise<NextResponse>) => {
-    return withRateLimit(fullOptions)(request => handler(request));
+    return withRateLimit(fullOptions)(request, () => handler(request));
   };
 }
 
@@ -169,4 +169,50 @@ export function apiKeyBasedGenerator(request: NextRequest): string {
     return `api-key:${apiKey}`;
   }
   return getClientIdentifier(request);
+}
+
+/**
+ * Re-export rate limiters from security module for compatibility
+ */
+export const rateLimiters = securityRateLimiters;
+
+/**
+ * Rate limit middleware function for API routes
+ * Compatible with existing usage patterns
+ */
+export async function rateLimitMiddleware(
+  request: NextRequest,
+  limitType: keyof typeof rateLimiters = 'api'
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const rateLimiter = rateLimiters[limitType];
+    if (!rateLimiter) {
+      console.error(`Unknown rate limiter type: ${String(limitType)}`);
+      return { success: true }; // Fail open
+    }
+
+    // Get user ID from session if available
+    let userId: string | undefined;
+    try {
+      const session = await AuthTokenService.verifyRequest(request);
+      userId = session?.userId;
+    } catch (error) {
+      // Continue without user ID if session verification fails
+    }
+
+    // Generate identifier for rate limiting
+    const identifier = getClientIdentifier(request, userId);
+
+    // Check rate limit
+    const result = await rateLimiter.checkLimit(identifier);
+
+    return {
+      success: result.allowed,
+      error: result.allowed ? undefined : 'Rate limit exceeded'
+    };
+  } catch (error) {
+    console.error('Rate limit middleware error:', error);
+    // Fail open - allow request if rate limiting fails
+    return { success: true };
+  }
 }

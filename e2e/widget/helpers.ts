@@ -303,7 +303,7 @@ export async function mockIntegrationsAPI(
             successRate: 0
           }
         }
-      });
+      })
     });
   });
 }
