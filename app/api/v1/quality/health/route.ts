@@ -5,11 +5,21 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { qualityAssurance } from '@/lib/services/quality-assurance';
-import { analyticsService } from '@/lib/services/analytics';
 import { db } from '@/lib/db/connection';
 import { documents, documentChunks } from '@/lib/db/schema';
 import { sql, count, avg, desc } from 'drizzle-orm';
+
+// Dynamically import services to avoid build-time initialization issues
+const getServices = async () => {
+  try {
+    const { qualityAssurance } = await import('@/lib/services/quality-assurance');
+    const { analyticsService } = await import('@/lib/services/analytics');
+    return { qualityAssurance, analyticsService };
+  } catch (error) {
+    console.error('Services unavailable during build:', error);
+    return null;
+  }
+};
 
 // Query parameters schema
 const healthQuerySchema = z.object({
@@ -24,6 +34,18 @@ const healthQuerySchema = z.object({
  */
 export async function GET(request: NextRequest) {
   try {
+    const services = await getServices();
+
+    if (!services) {
+      return NextResponse.json({
+        success: false,
+        error: 'Quality services unavailable',
+        details: 'Services could not be loaded'
+      }, { status: 503 });
+    }
+
+    const { qualityAssurance, analyticsService } = services;
+
     const { searchParams } = new URL(request.url);
     const queryParams = {
       includeDetails: searchParams.get('includeDetails') === 'true',
@@ -126,6 +148,18 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    const services = await getServices();
+
+    if (!services) {
+      return NextResponse.json({
+        success: false,
+        error: 'Quality services unavailable',
+        details: 'Services could not be loaded'
+      }, { status: 503 });
+    }
+
+    const { qualityAssurance, analyticsService } = services;
+
     const body = await request.json();
     const { runDiagnostics = false, includePerformanceTests = false } = body;
 
