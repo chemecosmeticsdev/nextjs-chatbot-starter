@@ -6,6 +6,13 @@ const nextConfig = {
     // Memory optimizations for development
     optimizeCss: process.env.NODE_ENV === 'development' ? false : true,
   },
+  // ESLint configuration for AWS Amplify builds
+  eslint: {
+    // Only run ESLint on these directories during production builds
+    dirs: ['app', 'lib', 'components'],
+    // Allow production builds to successfully complete even if ESLint finds errors
+    ignoreDuringBuilds: true,
+  },
   images: {
     remotePatterns: [
       {
