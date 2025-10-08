@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Configure output for AWS Amplify deployment
+  output: 'standalone',
   experimental: {
     typedRoutes: false,
     instrumentationHook: true,
