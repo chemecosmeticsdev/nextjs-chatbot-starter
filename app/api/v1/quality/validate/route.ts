@@ -5,8 +5,18 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { qualityAssurance } from '@/lib/services/quality-assurance';
-import { analyticsService } from '@/lib/services/analytics';
+
+// Dynamically import services to avoid build-time initialization issues
+const getServices = async () => {
+  try {
+    const { qualityAssurance } = await import('@/lib/services/quality-assurance');
+    const { analyticsService } = await import('@/lib/services/analytics');
+    return { qualityAssurance, analyticsService };
+  } catch (error) {
+    console.error('Services unavailable during build:', error);
+    return null;
+  }
+};
 
 // Request schemas
 const validateDocumentSchema = z.object({
@@ -26,15 +36,25 @@ const validateBatchSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
+    const services = await getServices();
+
+    if (!services) {
+      return NextResponse.json({
+        success: false,
+        error: 'Quality validation services unavailable',
+        details: 'Services could not be loaded'
+      }, { status: 503 });
+    }
+
     const body = await request.json();
 
     // Determine if this is a single document or batch validation
     const isBatch = Array.isArray(body.documentIds);
 
     if (isBatch) {
-      return await handleBatchValidation(body);
+      return await handleBatchValidation(body, services);
     } else {
-      return await handleSingleValidation(body);
+      return await handleSingleValidation(body, services);
     }
   } catch (error) {
     console.error('Quality validation API error:', error);
@@ -54,11 +74,12 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function handleSingleValidation(body: any) {
+async function handleSingleValidation(body: any, services: any) {
   // Validate request body
   const validatedData = validateDocumentSchema.parse(body);
   const { documentId, includeRecommendations } = validatedData;
 
+  const { qualityAssurance, analyticsService } = services;
   const startTime = Date.now();
 
   try {
@@ -128,11 +149,12 @@ async function handleSingleValidation(body: any) {
   }
 }
 
-async function handleBatchValidation(body: any) {
+async function handleBatchValidation(body: any, services: any) {
   // Validate request body
   const validatedData = validateBatchSchema.parse(body);
   const { documentIds, includeRecommendations, failFast } = validatedData;
 
+  const { qualityAssurance, analyticsService } = services;
   const startTime = Date.now();
 
   try {
@@ -221,6 +243,16 @@ async function handleBatchValidation(body: any) {
  */
 export async function GET(request: NextRequest) {
   try {
+    const services = await getServices();
+
+    if (!services) {
+      return NextResponse.json({
+        success: false,
+        error: 'Quality validation services unavailable',
+        details: 'Services could not be loaded'
+      }, { status: 503 });
+    }
+
     const { searchParams } = new URL(request.url);
     const documentId = searchParams.get('documentId');
 
@@ -230,6 +262,8 @@ export async function GET(request: NextRequest) {
         error: 'Document ID is required'
       }, { status: 400 });
     }
+
+    const { qualityAssurance } = services;
 
     // Get cached validation result if available
     const validationResult = await qualityAssurance.validateDocument(documentId);
