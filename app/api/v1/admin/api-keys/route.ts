@@ -7,6 +7,9 @@ import { withSecurityHeaders, adminSecurityHeaders } from '@/lib/middleware/secu
 import { apiKeyCreateSchema, paginationSchema } from '@/lib/security/validation';
 import { AuditLogger, SecurityEventType } from '@/lib/security/audit-logger';
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/v1/admin/api-keys - List API keys for user
  */

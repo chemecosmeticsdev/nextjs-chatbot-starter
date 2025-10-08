@@ -6,6 +6,9 @@ import { rateLimitMiddleware } from '@/lib/middleware/rate-limit';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic';
+
 // GET /api/integrations/widget/[id]/loader.js
 export async function GET(
   request: NextRequest,

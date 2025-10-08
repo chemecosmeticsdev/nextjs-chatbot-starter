@@ -3,6 +3,9 @@ import { AuthTokenService } from '@/lib/auth';
 import { UserSyncService } from '@/lib/user-sync';
 import { SystemSettingsService } from '@/lib/system-settings';
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const sessionToken = request.cookies.get('session')?.value;

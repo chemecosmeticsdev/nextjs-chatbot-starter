@@ -5,6 +5,9 @@ import { AuthTokenService } from '@/lib/auth';
 import { validateKnowledgeBaseSearch } from '@/lib/validation/knowledge-base';
 import { createSuccessResponse, createErrorResponse } from '@/lib/utils/api-response';
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/v1/chatbots/{id}/knowledge/search
  *

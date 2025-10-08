@@ -9,6 +9,9 @@ import {
 } from '@/lib/validation/knowledge-base';
 import { formatValidationErrors } from '@/lib/validation/common';
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/v1/knowledge-base/search
  *

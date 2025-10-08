@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { AuthTokenService } from '@/lib/auth';
 import { UserSyncService } from '@/lib/user-sync';
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const sessionToken = request.cookies.get('session')?.value;

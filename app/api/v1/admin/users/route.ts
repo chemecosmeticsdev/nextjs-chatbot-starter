@@ -3,6 +3,9 @@ import { AuthTokenService } from '@/lib/auth';
 import { UserSyncService, DatabaseUser } from '@/lib/user-sync';
 import { AuditLogger, SecurityEventType } from '@/lib/security/audit-logger';
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic';
+
 interface UserListResponse {
   id: string;
   email: string;

@@ -6,6 +6,9 @@ import { contentModerationRules } from '@/lib/db/schema';
 import type { NewContentModerationRule } from '@/lib/db/schema';
 import { eq, desc } from 'drizzle-orm';
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic';
+
 export interface CreateRuleRequest {
   name: string;
   ruleType: 'profanity' | 'spam' | 'toxicity' | 'custom_pattern' | 'ai_detection';

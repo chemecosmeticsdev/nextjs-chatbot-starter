@@ -4,6 +4,9 @@ import { AuthTokenService } from '@/lib/auth';
 import { validateUserActivityEvent } from '@/lib/validation/analytics';
 import { createSuccessResponse, createErrorResponse } from '@/lib/utils/api-response';
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/v1/analytics/activity
  *

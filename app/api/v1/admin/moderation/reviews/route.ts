@@ -6,6 +6,9 @@ import { db } from '@/lib/db';
 import { contentModerationViolations, contentModerationReviews } from '@/lib/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic';
+
 export interface ReviewViolationRequest {
   violationId: string;
   action: 'approve' | 'reject' | 'escalate';

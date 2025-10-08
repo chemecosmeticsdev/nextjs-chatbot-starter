@@ -4,6 +4,9 @@ import { getClientIdentifier } from '@/lib/security/rate-limiter';
 import { AuditLogger, SecurityEventType } from '@/lib/security/audit-logger';
 import type { ModerationContext } from '@/lib/db/schema';
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic';
+
 export interface CheckContentRequest {
   content: string;
   chatbotId: string;

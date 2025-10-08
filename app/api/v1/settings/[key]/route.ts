@@ -4,6 +4,9 @@ import { UserSyncService } from '@/lib/user-sync';
 import { DrizzleSettingsService } from '@/lib/db/settings';
 import { z } from 'zod';
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic';
+
 // Validation schemas
 const UpdateSettingSchema = z.object({
   value: z.any(),

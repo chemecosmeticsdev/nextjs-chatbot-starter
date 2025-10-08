@@ -3,6 +3,9 @@ import { ComplianceLogger } from '@/lib/services/compliance-logger';
 import { UserReportingService } from '@/lib/services/user-reporting';
 import { AuditLogger, SecurityEventType } from '@/lib/security/audit-logger';
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic';
+
 export interface AnalyticsRequest {
   startDate: string;
   endDate: string;

@@ -4,6 +4,9 @@ import { getClientIdentifier } from '@/lib/security/rate-limiter';
 import { AuditLogger, SecurityEventType } from '@/lib/security/audit-logger';
 import type { UserReportData } from '@/lib/services/user-reporting';
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic';
+
 export interface SubmitReportRequest {
   messageId: string;
   reportCategory: 'spam' | 'inappropriate' | 'harassment' | 'misinformation' | 'offensive_language' | 'privacy_violation' | 'copyright' | 'other';

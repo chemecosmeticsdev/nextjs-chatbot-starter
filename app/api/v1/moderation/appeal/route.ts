@@ -4,6 +4,9 @@ import { getClientIdentifier } from '@/lib/security/rate-limiter';
 import { AuditLogger, SecurityEventType } from '@/lib/security/audit-logger';
 import type { AppealData } from '@/lib/services/user-reporting';
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic';
+
 export interface SubmitAppealRequest {
   violationId: string;
   appealReason: string;

@@ -4,6 +4,9 @@ import { ChatbotService } from '@/lib/db/chatbot-service';
 import { ApiUsageService } from '@/lib/services/api-usage-service';
 import { createErrorResponse, createSuccessResponse } from '@/lib/utils/api-response';
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic';
+
 /**
  * Get public chatbot configuration for widget integration
  * GET /api/v1/public/chat/{id}/config

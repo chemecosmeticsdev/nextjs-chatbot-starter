@@ -7,6 +7,9 @@ import { sanitizeInput } from '@/lib/middleware/sanitize';
 import { PublicApiValidator } from '@/lib/validation/public-api';
 import { createErrorResponse, createSuccessResponse } from '@/lib/utils/api-response';
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic';
+
 /**
  * Public API endpoint for sending messages to chatbots
  * POST /api/v1/public/chat/{id}/messages

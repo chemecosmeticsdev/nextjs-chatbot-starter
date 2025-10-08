@@ -4,6 +4,9 @@ import { ApiUsageService } from '@/lib/services/api-usage-service';
 import { PublicApiValidator } from '@/lib/validation/public-api';
 import { createErrorResponse, createSuccessResponse } from '@/lib/utils/api-response';
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic';
+
 /**
  * API Usage Analytics Endpoint
  * GET /api/v1/analytics/usage

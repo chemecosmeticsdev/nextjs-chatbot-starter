@@ -6,6 +6,9 @@ import { z } from 'zod';
 import { jobQueue } from '@/lib/services/job-queue';
 import { cache, CacheKeys } from '@/lib/services/cache-service';
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic';
+
 /**
  * Bulk Document Status API
  *
