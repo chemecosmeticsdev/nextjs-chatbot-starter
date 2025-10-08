@@ -1,7 +1,21 @@
 import { jobQueue, JobType, JobPriority, type Job } from './job-queue';
 import { cache, CacheKeys } from './cache-service';
 import { CachedAnalyticsService } from './cached-analytics';
-import { enhancedDocumentProcessor } from './enhanced-document-processor';
+// Dynamic import for enhanced-document-processor to prevent build-time initialization
+
+/**
+ * Get enhanced document processor with dynamic import to prevent build-time initialization
+ */
+async function getEnhancedDocumentProcessor() {
+  try {
+    const { enhancedDocumentProcessor } = await import('./enhanced-document-processor');
+    return enhancedDocumentProcessor;
+  } catch (error) {
+    console.error('[JobProcessors] Failed to load enhanced document processor:', error);
+    throw new Error('Enhanced document processor unavailable');
+  }
+}
+
 import { vectorStorage } from './vector-storage';
 import { db } from '@/lib/db';
 import { chatbotMessages, chatbotConversations, chatbotInstances, documents, activityLogs } from '@/lib/db/schema';
@@ -161,6 +175,8 @@ export class EnhancedDocumentProcessingProcessor implements JobProcessor {
 
   async process(job: Job): Promise<void> {
     try {
+      const enhancedDocumentProcessor = await getEnhancedDocumentProcessor();
+
       switch (job.type) {
         case JobType.DOCUMENT_DOWNLOAD:
           await enhancedDocumentProcessor.processDocumentDownload(job);
@@ -681,6 +697,7 @@ export class GoogleDriveProcessor implements JobProcessor {
           };
 
           // Process through enhanced document processor directly
+          const enhancedDocumentProcessor = await getEnhancedDocumentProcessor();
           await enhancedDocumentProcessor.processCompleteDocumentPipeline(completeJob);
 
           processedCount++;
@@ -741,6 +758,7 @@ export class GoogleDriveProcessor implements JobProcessor {
       };
 
       // Process through enhanced document processor
+      const enhancedDocumentProcessor = await getEnhancedDocumentProcessor();
       await enhancedDocumentProcessor.processCompleteDocumentPipeline(completeJob);
 
       await jobQueue.updateJobProgress(job.id, 100, 'completed', 'Google Drive file processing completed');
