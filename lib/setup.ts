@@ -10,7 +10,20 @@ import {
   debugEventEmitters,
   startLightweightMemoryMonitoring
 } from './utils/event-emitter-config';
-import { jobQueueManager } from './services/job-processors';
+// Dynamic import for job-processors to prevent build-time initialization
+
+/**
+ * Get job queue manager with dynamic import to prevent build-time initialization
+ */
+async function getJobQueueManager() {
+  try {
+    const { jobQueueManager } = await import('./services/job-processors');
+    return jobQueueManager;
+  } catch (error) {
+    console.error('[Setup] Failed to load job queue manager:', error);
+    throw new Error('Job queue manager unavailable');
+  }
+}
 
 // Track initialization to prevent multiple starts
 let isInitialized = false;
@@ -43,6 +56,7 @@ export async function initializeApplication() {
 
     // Start job queue manager for background processing (with safety check)
     try {
+      const jobQueueManager = await getJobQueueManager();
       await jobQueueManager.start();
       console.log('[Setup] Job queue manager started successfully');
     } catch (jobQueueError) {
@@ -98,6 +112,7 @@ export async function shutdownApplication() {
 
   try {
     // Stop job queue manager
+    const jobQueueManager = await getJobQueueManager();
     await jobQueueManager.stop();
     console.log('[Setup] Job queue manager stopped');
 

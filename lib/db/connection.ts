@@ -2,8 +2,20 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from './schema';
 
-// Initialize application setup (EventEmitter config, etc.)
-import '../setup';
+// Initialize application setup only at runtime (not during build)
+if (typeof window === 'undefined' && (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'production')) {
+  try {
+    // Only import setup when actually needed at runtime
+    import('../setup').then(module => {
+      // Setup is imported but initializeApplication should be called explicitly
+      console.log('[Database] Setup module loaded for runtime use');
+    }).catch(error => {
+      console.warn('[Database] Setup module not available during build:', error.message);
+    });
+  } catch (error) {
+    console.warn('[Database] Setup import skipped during build:', error instanceof Error ? error.message : 'Unknown error');
+  }
+}
 
 // Database connection state
 let client: postgres.Sql<{}>;

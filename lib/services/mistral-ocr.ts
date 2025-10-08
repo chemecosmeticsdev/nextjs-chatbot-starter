@@ -387,8 +387,47 @@ export class MistralOCRService {
   }
 }
 
-// Export singleton instance
-export const mistralOCR = new MistralOCRService();
+// Lazy singleton instance - only create when needed at runtime
+let mistralOCRInstance: MistralOCRService | null = null;
+
+/**
+ * Get the MistralOCR service instance (lazy initialization)
+ * This prevents the service from being created during build time
+ */
+export function getMistralOCR(): MistralOCRService {
+  if (!mistralOCRInstance) {
+    mistralOCRInstance = new MistralOCRService();
+  }
+  return mistralOCRInstance;
+}
+
+/**
+ * Get MistralOCR service with build-time safety
+ * Returns null during build to prevent initialization errors
+ */
+export function getMistralOCRSafe(): MistralOCRService | null {
+  // Skip initialization during build time
+  if (typeof window === 'undefined' && process.env.NODE_ENV !== 'development' && !process.env.MISTRAL_API_KEY) {
+    return null;
+  }
+  return getMistralOCR();
+}
+
+// Export backward compatible instance with build guard
+const createSafeMistralOCR = (): MistralOCRService | null => {
+  try {
+    // Only create during development or when API key is available
+    if (process.env.NODE_ENV === 'development' || process.env.MISTRAL_API_KEY) {
+      return getMistralOCR();
+    }
+    return null;
+  } catch (error) {
+    console.warn('[MistralOCR] Service unavailable during build:', error instanceof Error ? error.message : 'Unknown error');
+    return null;
+  }
+};
+
+export const mistralOCR = createSafeMistralOCR();
 
 // Export types for use in other modules
 export type ExtractionMethod = 'native' | 'mistral_ocr' | 'hybrid';

@@ -1,6 +1,23 @@
 import { jobQueue, JobType, JobPriority, type Job } from './job-queue';
-import { mistralOCR } from './mistral-ocr';
+// Dynamic import for mistralOCR to prevent build-time initialization
 import { enhancedMetadataExtractor } from './metadata-extraction';
+
+/**
+ * Get MistralOCR service with dynamic import to prevent build-time initialization
+ */
+async function getMistralOCRService() {
+  try {
+    const { getMistralOCRSafe } = await import('./mistral-ocr');
+    const service = getMistralOCRSafe();
+    if (!service) {
+      throw new Error('MistralOCR service not available (missing API key or build context)');
+    }
+    return service;
+  } catch (error) {
+    console.error('[EnhancedDocumentProcessor] Failed to load MistralOCR service:', error);
+    throw new Error('MistralOCR service unavailable');
+  }
+}
 import { DocumentChunker } from './document-chunker';
 import { vectorStorage } from './vector-storage';
 import { titanEmbedder } from '../embeddings/titan-embedder';
@@ -538,7 +555,8 @@ export class EnhancedDocumentProcessor {
       // Strategy 1: Primary Mistral OCR extraction
       try {
         console.log(`[TextExtraction] Attempting primary Mistral OCR extraction for: ${originalFilename}`);
-        extractionResult = await mistralOCR.extractText(fileContent, mimeType, originalFilename);
+        const mistralOCRService = await getMistralOCRService();
+        extractionResult = await mistralOCRService.extractText(fileContent, mimeType, originalFilename);
 
         if (extractionResult.success && extractionResult.text && extractionResult.text.trim().length > 0) {
           console.log(`[TextExtraction] Primary extraction successful. Text length: ${extractionResult.text.length}`);
@@ -1851,7 +1869,8 @@ export class EnhancedDocumentProcessor {
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       // Retry the original extraction - sometimes temporary issues resolve
-      const result = await mistralOCR.extractText(fileContent, mimeType, originalFilename);
+      const mistralOCRService = await getMistralOCRService();
+      const result = await mistralOCRService.extractText(fileContent, mimeType, originalFilename);
 
       if (result.success && result.text && result.text.trim().length > 0) {
         return result;
