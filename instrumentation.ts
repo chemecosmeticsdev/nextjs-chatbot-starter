@@ -17,8 +17,8 @@ export async function register() {
       }
 
       // Import and run setup initialization
-      // const { initializeApplication } = await import('./lib/setup');
-      // await initializeApplication();
+      const { initializeApplication } = await import('./lib/setup');
+      await initializeApplication();
 
       console.log('Application services initialized successfully');
     } catch (error) {
