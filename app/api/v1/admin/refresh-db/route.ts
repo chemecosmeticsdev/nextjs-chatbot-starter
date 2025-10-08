@@ -4,7 +4,17 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { refreshConnection, testConnection } from '@/lib/db/connection';
+
+// Dynamically import database functions to avoid build-time database connection
+const getDatabaseFunctions = async () => {
+  try {
+    const { refreshConnection, testConnection } = await import('@/lib/db/connection');
+    return { refreshConnection, testConnection };
+  } catch (error) {
+    console.error('Database connection unavailable during build:', error);
+    return null;
+  }
+};
 
 /**
  * POST /api/v1/admin/refresh-db
@@ -12,6 +22,17 @@ import { refreshConnection, testConnection } from '@/lib/db/connection';
  */
 export async function POST(request: NextRequest) {
   try {
+    const dbFunctions = await getDatabaseFunctions();
+
+    if (!dbFunctions) {
+      return NextResponse.json({
+        success: false,
+        error: 'Database connection unavailable',
+        details: 'Database functions could not be loaded'
+      }, { status: 503 });
+    }
+
+    const { refreshConnection, testConnection } = dbFunctions;
     const startTime = Date.now();
 
     // Test current connection
@@ -52,6 +73,17 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
+    const dbFunctions = await getDatabaseFunctions();
+
+    if (!dbFunctions) {
+      return NextResponse.json({
+        success: false,
+        error: 'Database connection unavailable',
+        details: 'Database functions could not be loaded'
+      }, { status: 503 });
+    }
+
+    const { testConnection } = dbFunctions;
     const health = await testConnection();
 
     return NextResponse.json({
