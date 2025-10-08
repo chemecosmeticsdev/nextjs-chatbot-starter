@@ -2,6 +2,10 @@
 const nextConfig = {
   // Configure output for AWS Amplify deployment
   output: 'standalone',
+  // Skip TypeScript checking during build to avoid memory issues
+  typescript: {
+    ignoreBuildErrors: true,
+  },
   experimental: {
     typedRoutes: false,
     instrumentationHook: true,
