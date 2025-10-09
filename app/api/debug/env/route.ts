@@ -28,11 +28,19 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         normal: process.env.SQS_NORMAL_QUEUE_URL || 'not-set',
         low: process.env.SQS_LOW_QUEUE_URL || 'not-set',
       },
+      stepFunctions: {
+        bucket: process.env.STEPFUNCTIONS_S3_BUCKET || 'NOT_SET',
+        accountId: process.env.ACCOUNT_ID || 'NOT_SET',
+        hasCredentials: !!(process.env.BAWS_ACCESS_KEY_ID && process.env.BAWS_SECRET_ACCESS_KEY),
+        region: process.env.DEFAULT_REGION || 'NOT_SET'
+      },
       allEnvKeys: Object.keys(process.env).filter(key =>
         key.startsWith('SQS_') ||
         key.startsWith('BAWS_') ||
         key.startsWith('DEFAULT_') ||
-        key.startsWith('NODE_')
+        key.startsWith('NODE_') ||
+        key.startsWith('STEPFUNCTIONS_') ||
+        key.startsWith('ACCOUNT_')
       ).sort()
     };
 
