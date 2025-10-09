@@ -16,24 +16,21 @@ frontend:
         - export NODE_ENV=production
         # Reduce memory pressure during build
         - npm run build
+        # For standalone mode, copy static files and standalone output
+        - cp -r .next/standalone/. ./
+        - cp -r .next/static ./.next/
+        - cp -r public ./
         # Clean up build artifacts to reduce memory footprint
         - find .next -name "*.map" -type f -delete || true
         # Memory cleanup after build
         - npm cache clean --force || true
   artifacts:
-    baseDirectory: .next
+    baseDirectory: .
     files:
       - '**/*'
+      - '!node_modules/**/*'
+      - '!.next/cache/**/*'
   cache:
     paths:
       - node_modules/**/*
       - .next/cache/**/*
-  # Memory and performance optimizations
-  environment:
-    variables:
-      # Optimize Node.js runtime memory
-      NODE_OPTIONS: "--max-old-space-size=3072"
-      # Reduce build memory pressure
-      NEXT_TELEMETRY_DISABLED: "1"
-      # Enable production optimizations
-      NODE_ENV: "production"
