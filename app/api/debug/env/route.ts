@@ -13,7 +13,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const envDebug = {
       timestamp: new Date().toISOString(),
-      deploymentVersion: 'v2.0',
       nodeEnv: process.env.NODE_ENV,
       region: process.env.DEFAULT_REGION,
       hasAwsCredentials: !!(process.env.BAWS_ACCESS_KEY_ID && process.env.BAWS_SECRET_ACCESS_KEY),
