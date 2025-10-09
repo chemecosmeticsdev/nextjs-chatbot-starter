@@ -54,6 +54,16 @@ export async function initializeApplication() {
     // Setup graceful shutdown handling
     setupGracefulShutdown();
 
+    // Validate SQS connectivity before starting job processing
+    try {
+      const { jobQueue } = await import('./services/job-queue');
+      await jobQueue.validateStartupConnectivity();
+      console.log('[Setup] SQS connectivity validation completed');
+    } catch (sqsValidationError) {
+      console.error('[Setup] SQS connectivity validation failed:', sqsValidationError);
+      console.warn('[Setup] Continuing with degraded SQS functionality');
+    }
+
     // Start job queue manager for background processing (with safety check)
     try {
       const jobQueueManager = await getJobQueueManager();

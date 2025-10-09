@@ -127,6 +127,36 @@ export class JobQueueService {
     this.initializeSQSClients();
   }
 
+  /**
+   * Validate SQS connectivity during startup
+   * This should be called after construction to ensure queues are accessible
+   */
+  async validateStartupConnectivity(): Promise<void> {
+    console.log('[SQS] Starting startup connectivity validation...');
+
+    try {
+      // Force an immediate health check regardless of interval
+      this.lastHealthCheck = 0;
+      await this.checkHealth();
+
+      if (!this.isHealthy) {
+        throw new Error('SQS health check failed during startup');
+      }
+
+      console.log('[SQS] Startup connectivity validation completed successfully');
+    } catch (error: any) {
+      console.error('[SQS] CRITICAL - Startup connectivity validation failed:', {
+        error: error?.message,
+        timestamp: new Date().toISOString()
+      });
+
+      // Mark as unhealthy but don't throw to allow graceful degradation
+      this.markUnhealthy();
+
+      console.warn('[SQS] Job queue will operate in degraded mode - background processing disabled');
+    }
+  }
+
   private initializeSQSClients(): void {
     for (const [priority, config] of Object.entries(QueueConfigs)) {
       const client = new SQSClient({
@@ -505,9 +535,37 @@ export class JobQueueService {
     priority: JobPriority,
     maxMessages: number = 1
   ): Promise<Array<{ job: Job; receiptHandle: string }>> {
+    const startTime = Date.now();
+
     try {
       const config = QueueConfigs[priority];
-      const client = this.sqsClients.get(priority)!;
+      const client = this.sqsClients.get(priority);
+
+      // Enhanced validation and logging
+      if (!config) {
+        console.error(`[SQS] No configuration found for priority: ${priority}`);
+        return [];
+      }
+
+      if (!client) {
+        console.error(`[SQS] No SQS client found for priority: ${priority}`);
+        return [];
+      }
+
+      if (!config.queueUrl) {
+        console.error(`[SQS] No queue URL configured for priority: ${priority}`, {
+          config,
+          envVarName: `SQS_${priority.toUpperCase()}_QUEUE_URL`
+        });
+        return [];
+      }
+
+      console.log(`[SQS] Attempting to receive jobs from ${priority} queue`, {
+        queueUrl: config.queueUrl,
+        maxMessages,
+        region: config.region,
+        visibilityTimeout: config.visibilityTimeout
+      });
 
       const command = new ReceiveMessageCommand({
         QueueUrl: config.queueUrl,
@@ -520,7 +578,11 @@ export class JobQueueService {
       const response = await client.send(command);
       const jobs: Array<{ job: Job; receiptHandle: string }> = [];
 
+      const duration = Date.now() - startTime;
+
       if (response.Messages) {
+        console.log(`[SQS] Received ${response.Messages.length} messages from ${priority} queue in ${duration}ms`);
+
         for (const message of response.Messages) {
           try {
             const job = JSON.parse(message.Body!) as Job;
@@ -528,15 +590,55 @@ export class JobQueueService {
               job,
               receiptHandle: message.ReceiptHandle!
             });
-          } catch (error) {
-            console.error('Failed to parse job message:', error);
+          } catch (parseError) {
+            console.error(`[SQS] Failed to parse job message from ${priority} queue:`, {
+              error: parseError,
+              messageId: message.MessageId,
+              messageBody: message.Body?.substring(0, 200) + '...'
+            });
           }
         }
+      } else {
+        console.log(`[SQS] No messages received from ${priority} queue in ${duration}ms`);
       }
 
       return jobs;
-    } catch (error) {
-      console.error(`Failed to receive jobs from ${priority} queue:`, error);
+    } catch (error: any) {
+      const duration = Date.now() - startTime;
+
+      // Enhanced error logging with detailed context
+      const errorContext = {
+        priority,
+        maxMessages,
+        duration,
+        errorName: error?.name,
+        errorCode: error?.Code || error?.code,
+        errorMessage: error?.message,
+        statusCode: error?.$metadata?.httpStatusCode,
+        requestId: error?.$metadata?.requestId,
+        region: QueueConfigs[priority]?.region,
+        queueUrl: QueueConfigs[priority]?.queueUrl,
+        timestamp: new Date().toISOString()
+      };
+
+      console.error(`[SQS] CRITICAL - Failed to receive jobs from ${priority} queue:`, errorContext);
+
+      // Log specific AWS SQS error types
+      if (error?.name === 'QueueDoesNotExist') {
+        console.error(`[SQS] Queue does not exist - check queue URL configuration: ${QueueConfigs[priority]?.queueUrl}`);
+      } else if (error?.name === 'AccessDenied' || error?.Code === 'AccessDenied') {
+        console.error(`[SQS] Access denied - check IAM permissions for SQS operations`);
+      } else if (error?.name === 'InvalidParameterValue') {
+        console.error(`[SQS] Invalid parameter - check queue configuration`);
+      } else if (error?.name === 'NetworkingError' || error?.code === 'ENOTFOUND') {
+        console.error(`[SQS] Network error - check internet connectivity and DNS resolution`);
+      } else if (error?.name === 'CredentialsError') {
+        console.error(`[SQS] Credentials error - check AWS access key and secret key configuration`);
+      }
+
+      // Also log the full error object for debugging
+      console.error(`[SQS] Full error details:`, error);
+
       return [];
     }
   }
@@ -649,19 +751,84 @@ export class JobQueueService {
       return;
     }
 
+    console.log(`[SQS] Starting health check at ${new Date().toISOString()}`);
+
     try {
-      // Simple health check - verify SQS clients are configured
+      // Phase 1: Verify SQS clients are configured
       for (const [priority, client] of this.sqsClients.entries()) {
         if (!client) {
           throw new Error(`SQS client for ${priority} priority not configured`);
         }
       }
 
+      // Phase 2: Test actual SQS connectivity for each queue
+      const connectivityTests = [];
+      for (const [priority, client] of this.sqsClients.entries()) {
+        const config = QueueConfigs[priority];
+        if (!config?.queueUrl) {
+          throw new Error(`Queue URL not configured for ${priority} priority`);
+        }
+
+        // Test connectivity with a lightweight operation
+        const testPromise = this.testSQSConnectivity(client, config.queueUrl, priority);
+        connectivityTests.push(testPromise);
+      }
+
+      // Wait for all connectivity tests to complete
+      const results = await Promise.allSettled(connectivityTests);
+
+      // Check if any tests failed
+      const failures = results.filter(result => result.status === 'rejected');
+      if (failures.length > 0) {
+        console.error(`[SQS] Connectivity test failed for ${failures.length} queues:`,
+          failures.map(f => f.reason?.message || 'Unknown error'));
+        throw new Error(`SQS connectivity failed for ${failures.length} queues`);
+      }
+
+      console.log(`[SQS] Health check passed - all ${this.sqsClients.size} queues accessible`);
       this.isHealthy = true;
       this.lastHealthCheck = now;
-    } catch (error) {
-      console.error('Job queue health check failed:', error);
+    } catch (error: any) {
+      console.error(`[SQS] Health check failed:`, {
+        error: error?.message,
+        timestamp: new Date().toISOString(),
+        clientsConfigured: this.sqsClients.size,
+        expectedQueues: Object.keys(QueueConfigs).length
+      });
       this.markUnhealthy();
+    }
+  }
+
+  /**
+   * Test connectivity to a specific SQS queue
+   */
+  private async testSQSConnectivity(client: any, queueUrl: string, priority: JobPriority): Promise<void> {
+    try {
+      console.log(`[SQS] Testing connectivity to ${priority} queue: ${queueUrl}`);
+
+      // Use GetQueueAttributes as a lightweight connectivity test
+      const command = new (await import('@aws-sdk/client-sqs')).GetQueueAttributesCommand({
+        QueueUrl: queueUrl,
+        AttributeNames: ['ApproximateNumberOfMessages']
+      });
+
+      const startTime = Date.now();
+      const response = await client.send(command);
+      const duration = Date.now() - startTime;
+
+      console.log(`[SQS] ${priority} queue connectivity test passed in ${duration}ms`, {
+        queueUrl,
+        messagesAvailable: response.Attributes?.ApproximateNumberOfMessages || '0'
+      });
+    } catch (error: any) {
+      console.error(`[SQS] Connectivity test failed for ${priority} queue:`, {
+        queueUrl,
+        errorName: error?.name,
+        errorCode: error?.Code || error?.code,
+        errorMessage: error?.message,
+        statusCode: error?.$metadata?.httpStatusCode
+      });
+      throw new Error(`${priority} queue connectivity failed: ${error?.message || 'Unknown error'}`);
     }
   }
 
