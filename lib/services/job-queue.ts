@@ -80,36 +80,36 @@ interface QueueConfig {
 // Default queue configurations
 const QueueConfigs: Record<JobPriority, QueueConfig> = {
   [JobPriority.CRITICAL]: {
-    queueUrl: process.env.AWS_SQS_CRITICAL_QUEUE_URL!,
+    queueUrl: process.env.SQS_CRITICAL_QUEUE_URL!,
     region: process.env.DEFAULT_REGION || 'ap-southeast-1',
     visibilityTimeout: 30,
     messageRetentionPeriod: 1209600, // 14 days
     maxReceiveCount: 3,
-    dlqUrl: process.env.AWS_SQS_CRITICAL_DLQ_URL
+    dlqUrl: process.env.SQS_CRITICAL_DLQ_URL
   },
   [JobPriority.HIGH]: {
-    queueUrl: process.env.AWS_SQS_HIGH_QUEUE_URL!,
+    queueUrl: process.env.SQS_HIGH_QUEUE_URL!,
     region: process.env.DEFAULT_REGION || 'ap-southeast-1',
     visibilityTimeout: 60,
     messageRetentionPeriod: 1209600,
     maxReceiveCount: 3,
-    dlqUrl: process.env.AWS_SQS_HIGH_DLQ_URL
+    dlqUrl: process.env.SQS_HIGH_DLQ_URL
   },
   [JobPriority.NORMAL]: {
-    queueUrl: process.env.AWS_SQS_NORMAL_QUEUE_URL!,
+    queueUrl: process.env.SQS_NORMAL_QUEUE_URL!,
     region: process.env.DEFAULT_REGION || 'ap-southeast-1',
     visibilityTimeout: 300, // 5 minutes
     messageRetentionPeriod: 1209600,
     maxReceiveCount: 5,
-    dlqUrl: process.env.AWS_SQS_NORMAL_DLQ_URL
+    dlqUrl: process.env.SQS_NORMAL_DLQ_URL
   },
   [JobPriority.LOW]: {
-    queueUrl: process.env.AWS_SQS_LOW_QUEUE_URL!,
+    queueUrl: process.env.SQS_LOW_QUEUE_URL!,
     region: process.env.DEFAULT_REGION || 'ap-southeast-1',
     visibilityTimeout: 900, // 15 minutes
     messageRetentionPeriod: 1209600,
     maxReceiveCount: 10,
-    dlqUrl: process.env.AWS_SQS_LOW_DLQ_URL
+    dlqUrl: process.env.SQS_LOW_DLQ_URL
   }
 };
 
