@@ -108,6 +108,15 @@ const nextConfig = {
     S3_DOCUMENT_BUCKET: process.env.S3_DOCUMENT_BUCKET,
     JWT_SECRET: process.env.JWT_SECRET,
     MISTRAL_API_KEY: process.env.MISTRAL_API_KEY,
+    // AWS SQS Job Queue Configuration
+    SQS_CRITICAL_QUEUE_URL: process.env.SQS_CRITICAL_QUEUE_URL,
+    SQS_HIGH_QUEUE_URL: process.env.SQS_HIGH_QUEUE_URL,
+    SQS_NORMAL_QUEUE_URL: process.env.SQS_NORMAL_QUEUE_URL,
+    SQS_LOW_QUEUE_URL: process.env.SQS_LOW_QUEUE_URL,
+    SQS_CRITICAL_DLQ_URL: process.env.SQS_CRITICAL_DLQ_URL,
+    SQS_HIGH_DLQ_URL: process.env.SQS_HIGH_DLQ_URL,
+    SQS_NORMAL_DLQ_URL: process.env.SQS_NORMAL_DLQ_URL,
+    SQS_LOW_DLQ_URL: process.env.SQS_LOW_DLQ_URL,
   },
 }
 
