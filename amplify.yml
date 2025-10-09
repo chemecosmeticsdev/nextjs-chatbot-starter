@@ -3,33 +3,14 @@ frontend:
   phases:
     preBuild:
       commands:
-        # Memory optimization for npm install
-        - export NODE_OPTIONS="--max-old-space-size=3072"
-        - npm install --prefer-offline --no-audit --no-fund
-        # Clean up any potential memory leaks from previous builds
-        - npm cache clean --force
+        - npm ci
     build:
       commands:
-        # Optimize Node.js memory for build process
-        - export NODE_OPTIONS="--max-old-space-size=3072"
-        # Enable garbage collection optimizations
-        - export NODE_ENV=production
-        # Reduce memory pressure during build
         - npm run build
-        # Copy files for standalone deployment
-        - cp -r .next/standalone/* ./
-        - cp -r public/* ./ 2>/dev/null || true
-        # Clean up build artifacts to reduce memory footprint
-        - find .next -name "*.map" -type f -delete || true
-        # Memory cleanup after build
-        - npm cache clean --force || true
   artifacts:
-    baseDirectory: .
+    baseDirectory: .next
     files:
       - '**/*'
-      - '!node_modules/**/*'
-      - '!.next/cache/**/*'
   cache:
     paths:
       - node_modules/**/*
-      - .next/cache/**/*
