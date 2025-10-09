@@ -11,7 +11,7 @@ frontend:
     build:
       commands:
         # Optimize Node.js memory for build process
-        - export NODE_OPTIONS="--max-old-space-size=3072 --optimize-for-size"
+        - export NODE_OPTIONS="--max-old-space-size=3072"
         # Enable garbage collection optimizations
         - export NODE_ENV=production
         # Reduce memory pressure during build
@@ -32,7 +32,7 @@ frontend:
   environment:
     variables:
       # Optimize Node.js runtime memory
-      NODE_OPTIONS: "--max-old-space-size=3072 --optimize-for-size"
+      NODE_OPTIONS: "--max-old-space-size=3072"
       # Reduce build memory pressure
       NEXT_TELEMETRY_DISABLED: "1"
       # Enable production optimizations
