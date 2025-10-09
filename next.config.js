@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Configure output for AWS Amplify deployment
-  output: 'standalone',
+  // Remove standalone output for AWS Amplify - Amplify handles deployment
+  // output: 'standalone',
   // Skip TypeScript checking during build to avoid memory issues
   typescript: {
     ignoreBuildErrors: true,

@@ -16,11 +16,6 @@ frontend:
         - export NODE_ENV=production
         # Reduce memory pressure during build
         - npm run build
-        # For standalone mode, copy static files and standalone output
-        - cp -r .next/standalone/. ./
-        - mkdir -p ./.next/static
-        - cp -r .next/static/* ./.next/static/ 2>/dev/null || true
-        - cp -r public ./ 2>/dev/null || true
         # Clean up build artifacts to reduce memory footprint
         - find .next -name "*.map" -type f -delete || true
         # Memory cleanup after build
