@@ -95,4 +95,4 @@ The project includes GitHub Actions workflows for:
 - Unit and integration tests with coverage
 - End-to-end tests with Playwright
 - Performance testing
-- Security scanning
+- Security scanning# Environment variables updated Thu Oct  9 16:19:08 UTC 2025
