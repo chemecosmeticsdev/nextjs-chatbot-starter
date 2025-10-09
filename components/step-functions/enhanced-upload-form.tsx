@@ -198,14 +198,39 @@ export function EnhancedUploadForm({
         );
       }
 
-      // Update file status to uploaded/processing
+      // Update file status based on upload and execution results
+      let fileStatus: 'uploaded' | 'processing' | 'failed' = 'uploaded';
+      let executionId: string | undefined = undefined;
+      let fileError: EnhancedError | undefined = undefined;
+
+      // Check if Step Functions execution was attempted and succeeded
+      if (uploadResult.execution) {
+        if (uploadResult.execution.error) {
+          // Step Functions execution failed
+          fileStatus = 'failed';
+          fileError = enhanceError(
+            new Error(uploadResult.execution.error),
+            {
+              operation: 'step_functions_execution',
+              fileName: fileItem.file.name,
+              category: ErrorCategory.CONFIGURATION
+            }
+          );
+        } else if (uploadResult.execution.id) {
+          // Step Functions execution succeeded
+          fileStatus = 'processing';
+          executionId = uploadResult.execution.id;
+        }
+      }
+
       setSelectedFiles(prev => prev.map(f =>
         f.id === fileId ? {
           ...f,
-          status: uploadResult.execution ? 'processing' : 'uploaded',
+          status: fileStatus,
           uploadProgress: 100,
           fileKey: uploadResult.file.fileKey,
-          executionId: uploadResult.execution?.id,
+          executionId,
+          error: fileError,
           retryCount: (f.retryCount || 0) + 1
         } : f
       ));
@@ -256,15 +281,44 @@ export function EnhancedUploadForm({
         })
       });
 
-      setSelectedFiles(prev => prev.map(f =>
-        f.id === fileItem.id ? {
-          ...f,
-          status: 'processing',
-          executionId: result.execution.id
-        } : f
-      ));
+      // Check if Step Functions execution succeeded or failed
+      if (result.success && result.execution && result.execution.id) {
+        // Successful execution start
+        setSelectedFiles(prev => prev.map(f =>
+          f.id === fileItem.id ? {
+            ...f,
+            status: 'processing',
+            executionId: result.execution.id
+          } : f
+        ));
 
-      onExecutionStarted?.(result.execution);
+        onExecutionStarted?.(result.execution);
+      } else {
+        // Step Functions execution failed
+        const errorMessage = result.execution?.error || result.error || 'Step Functions execution failed to start';
+        const enhanced = enhanceError(
+          new Error(errorMessage),
+          {
+            operation: 'step_functions_execution',
+            fileName: fileItem.file.name,
+            category: ErrorCategory.CONFIGURATION
+          }
+        );
+
+        setSelectedFiles(prev => prev.map(f =>
+          f.id === fileItem.id ? {
+            ...f,
+            status: 'failed',
+            error: enhanced
+          } : f
+        ));
+
+        // Still notify parent component about the failure
+        onExecutionStarted?.({
+          error: errorMessage,
+          fileName: fileItem.file.name
+        });
+      }
 
     } catch (error) {
       const enhanced = enhanceError(error as Error, {

@@ -63,6 +63,7 @@ interface ExecutionInfo {
   startedAt: string;
   progress?: number;
   currentStep?: string;
+  error?: string;
   steps?: Array<{
     name: string;
     status: string;
@@ -193,24 +194,52 @@ function StepFunctionsUploadForm() {
                   onFileUploaded={(result) => {
                     console.log('File uploaded:', result);
                     if (result.execution) {
-                      setExecutions(prev => [...prev, {
-                        id: result.execution.id,
-                        fileName: result.file.fileName,
-                        status: result.execution.status,
-                        startedAt: result.execution.startedAt,
-                        progress: 0
-                      }]);
+                      // Check if execution succeeded or failed
+                      if (result.execution.error) {
+                        // Handle Step Functions execution failure
+                        setExecutions(prev => [...prev, {
+                          id: `error-${Date.now()}-${Math.random()}`, // Generate a unique ID for error cases
+                          fileName: result.file.fileName,
+                          status: 'FAILED',
+                          startedAt: new Date().toISOString(),
+                          progress: 0,
+                          error: result.execution.error
+                        }]);
+                      } else if (result.execution.id) {
+                        // Handle successful execution start
+                        setExecutions(prev => [...prev, {
+                          id: result.execution.id,
+                          fileName: result.file.fileName,
+                          status: result.execution.status || 'RUNNING',
+                          startedAt: result.execution.startedAt || new Date().toISOString(),
+                          progress: 0
+                        }]);
+                      }
                     }
                   }}
                   onExecutionStarted={(execution) => {
                     console.log('Execution started:', execution);
-                    setExecutions(prev => [...prev, {
-                      id: execution.id,
-                      fileName: execution.fileName,
-                      status: execution.status,
-                      startedAt: execution.startedAt,
-                      progress: 0
-                    }]);
+                    // Only add to executions if it's a valid execution with an ID
+                    if (execution.error) {
+                      // Handle execution start failure
+                      setExecutions(prev => [...prev, {
+                        id: `error-${Date.now()}-${Math.random()}`, // Generate a unique ID for error cases
+                        fileName: execution.fileName || 'Unknown File',
+                        status: 'FAILED',
+                        startedAt: new Date().toISOString(),
+                        progress: 0,
+                        error: execution.error
+                      }]);
+                    } else if (execution.id) {
+                      // Handle successful execution start
+                      setExecutions(prev => [...prev, {
+                        id: execution.id,
+                        fileName: execution.fileName,
+                        status: execution.status || 'RUNNING',
+                        startedAt: execution.startedAt || new Date().toISOString(),
+                        progress: 0
+                      }]);
+                    }
                   }}
                 />
               </ErrorBoundary>
@@ -232,7 +261,7 @@ function StepFunctionsUploadForm() {
               <CardContent>
                 <div className="space-y-4">
                   {executions.map((execution) => (
-                    <Card key={execution.id} className="p-4">
+                    <Card key={execution.id} className={`p-4 ${execution.error ? 'border-red-200 bg-red-50' : ''}`}>
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex-1">
                           <h4 className="font-medium flex items-center gap-2">
@@ -240,11 +269,25 @@ function StepFunctionsUploadForm() {
                             {execution.fileName}
                           </h4>
                           <p className="text-sm text-gray-600">
-                            Execution ID: {execution.id.slice(0, 8)}...
+                            Execution ID: {execution.id && execution.id.slice ? execution.id.slice(0, 8) + '...' : 'N/A'}
                           </p>
                           <p className="text-sm text-gray-600">
                             Started: {new Date(execution.startedAt).toLocaleString()}
                           </p>
+                          {execution.error && (
+                            <Alert variant="destructive" className="mt-2">
+                              <AlertCircle className="h-4 w-4" />
+                              <AlertDescription>
+                                <div className="space-y-1">
+                                  <p className="font-medium">Step Functions Execution Failed</p>
+                                  <p className="text-sm">{execution.error}</p>
+                                  <p className="text-xs opacity-75">
+                                    This usually indicates missing environment variables or AWS configuration issues.
+                                  </p>
+                                </div>
+                              </AlertDescription>
+                            </Alert>
+                          )}
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge variant={
