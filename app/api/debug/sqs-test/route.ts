@@ -69,11 +69,20 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     try {
       const { jobQueueManager } = await import('@/lib/services/job-processors');
 
+      // Get comprehensive status using the proper getStatus() method
+      const status = jobQueueManager.getStatus();
+
       debugInfo.jobQueueManager = {
         loaded: true,
-        isRunning: typeof jobQueueManager.isRunning === 'function'
-          ? await jobQueueManager.isRunning()
-          : jobQueueManager.isRunning || false
+        status: {
+          running: status.running,
+          queueCount: status.queueCount,
+          currentlyProcessing: status.currentlyProcessing,
+          maxConcurrentJobs: status.maxConcurrentJobs,
+          memoryUsage: status.memoryUsage
+        },
+        hasGetStatusMethod: typeof jobQueueManager.getStatus === 'function',
+        hasStartMethod: typeof jobQueueManager.start === 'function'
       };
 
     } catch (managerError: any) {
