@@ -173,6 +173,9 @@ const nextConfig = {
     SQS_HIGH_DLQ_URL: process.env.SQS_HIGH_DLQ_URL,
     SQS_NORMAL_DLQ_URL: process.env.SQS_NORMAL_DLQ_URL,
     SQS_LOW_DLQ_URL: process.env.SQS_LOW_DLQ_URL,
+    // Step Functions Configuration
+    STEPFUNCTIONS_S3_BUCKET: process.env.STEPFUNCTIONS_S3_BUCKET,
+    ACCOUNT_ID: process.env.ACCOUNT_ID,
   },
 }
 
