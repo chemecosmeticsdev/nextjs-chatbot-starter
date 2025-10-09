@@ -1,6 +1,7 @@
 /**
  * SQS Health Check API Endpoint
  * Provides real-time monitoring of SQS connectivity and job queue status
+ * Also provides backup initialization of job queue manager
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -23,6 +24,9 @@ interface SQSHealthResponse {
   };
   jobQueue: {
     isRunning: boolean;
+    autoStartAttempted?: boolean;
+    autoStartSuccess?: boolean;
+    initializationMethod?: 'instrumentation' | 'health-endpoint' | 'unknown';
     stats?: {
       totalProcessed: number;
       totalFailed: number;
@@ -111,6 +115,44 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         }
       }
 
+      // Check and potentially start job queue manager (backup initialization)
+      try {
+        console.log('[API] Checking job queue manager status...');
+
+        // Try to get the job queue manager instance
+        const { jobQueueManager } = await import('@/lib/services/job-processors');
+
+        // Check if job queue manager is running
+        const isJobQueueRunning = await checkJobQueueManagerStatus(jobQueueManager);
+
+        healthData.jobQueue.isRunning = isJobQueueRunning;
+
+        if (!isJobQueueRunning) {
+          console.log('[API] Job queue manager not running, attempting to start...');
+          healthData.jobQueue.autoStartAttempted = true;
+
+          try {
+            await jobQueueManager.start();
+            healthData.jobQueue.autoStartSuccess = true;
+            healthData.jobQueue.isRunning = true;
+            healthData.jobQueue.initializationMethod = 'health-endpoint';
+            console.log('[API] Job queue manager started successfully via health endpoint');
+          } catch (startError: any) {
+            console.error('[API] Failed to start job queue manager:', startError);
+            healthData.jobQueue.autoStartSuccess = false;
+            healthData.status = 'degraded';
+          }
+        } else {
+          healthData.jobQueue.initializationMethod = 'instrumentation';
+          console.log('[API] Job queue manager already running');
+        }
+
+      } catch (jobQueueError: any) {
+        console.error('[API] Job queue manager check failed:', jobQueueError);
+        healthData.jobQueue.isRunning = false;
+        healthData.status = 'degraded';
+      }
+
       // Determine overall status
       if (!healthData.sqs.isHealthy) {
         healthData.status = 'unhealthy';
@@ -147,6 +189,36 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         queueUrls: {}
       }
     }, { status: 503 });
+  }
+}
+
+/**
+ * Check if job queue manager is actually running
+ */
+async function checkJobQueueManagerStatus(jobQueueManager: any): Promise<boolean> {
+  try {
+    // Check if the job queue manager has an isRunning method or property
+    if (typeof jobQueueManager.isRunning === 'function') {
+      return await jobQueueManager.isRunning();
+    } else if (typeof jobQueueManager.isRunning === 'boolean') {
+      return jobQueueManager.isRunning;
+    }
+
+    // Check if it has a status property
+    if (jobQueueManager.status) {
+      return jobQueueManager.status === 'running';
+    }
+
+    // If no clear status method, try to check if the manager has workers
+    if (jobQueueManager.workers && Array.isArray(jobQueueManager.workers)) {
+      return jobQueueManager.workers.length > 0;
+    }
+
+    // Fallback: assume it's not running if we can't determine status
+    return false;
+  } catch (error) {
+    console.error('[checkJobQueueManagerStatus] Error checking status:', error);
+    return false;
   }
 }
 
