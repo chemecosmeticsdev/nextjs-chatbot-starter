@@ -74,21 +74,47 @@ export function StepFunctionsRealtimeProvider({
 
 // Utility component for showing connection status
 export function ConnectionStatus() {
-  const { connectionStatus, error, isConnected } = useStepFunctionsRealtime();
+  const { connectionStatus, error, isConnected, isRealtimeEnabled } = useStepFunctionsRealtime();
+
+  // Determine status color and icon
+  const getStatusColor = () => {
+    if (connectionStatus === 'disabled') return 'text-gray-500';
+    if (isConnected) return 'text-green-600';
+    if (connectionStatus === 'error') return 'text-red-600';
+    return 'text-yellow-600';
+  };
+
+  const getStatusIcon = () => {
+    if (connectionStatus === 'disabled') return 'bg-gray-400';
+    if (isConnected) return 'bg-green-500';
+    if (connectionStatus === 'error') return 'bg-red-500';
+    return 'bg-yellow-500';
+  };
+
+  const getStatusText = () => {
+    switch (connectionStatus) {
+      case 'connecting':
+        return 'Connecting...';
+      case 'connected':
+        return 'Real-time updates';
+      case 'disconnected':
+        return 'Disconnected';
+      case 'disabled':
+        return 'Offline mode';
+      case 'error':
+        return error || 'Connection failed';
+      default:
+        return 'Unknown status';
+    }
+  };
 
   return (
-    <div className={`flex items-center gap-2 text-sm ${
-      isConnected ? 'text-green-600' : connectionStatus === 'error' ? 'text-red-600' : 'text-yellow-600'
-    }`}>
-      <div className={`w-2 h-2 rounded-full ${
-        isConnected ? 'bg-green-500' : connectionStatus === 'error' ? 'bg-red-500' : 'bg-yellow-500'
-      }`} />
-      <span>
-        {connectionStatus === 'connecting' && 'Connecting...'}
-        {connectionStatus === 'connected' && 'Connected'}
-        {connectionStatus === 'disconnected' && 'Disconnected'}
-        {connectionStatus === 'error' && `Error: ${error || 'Connection failed'}`}
-      </span>
+    <div className={`flex items-center gap-2 text-sm ${getStatusColor()}`}>
+      <div className={`w-2 h-2 rounded-full ${getStatusIcon()}`} />
+      <span>{getStatusText()}</span>
+      {connectionStatus === 'disabled' && (
+        <span className="text-xs text-gray-400 ml-1">(working normally)</span>
+      )}
     </div>
   );
 }

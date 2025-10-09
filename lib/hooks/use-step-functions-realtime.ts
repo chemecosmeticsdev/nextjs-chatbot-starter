@@ -45,7 +45,7 @@ export interface UseStepFunctionsRealtimeProps {
 }
 
 export interface UseStepFunctionsRealtimeReturn {
-  connectionStatus: 'connecting' | 'connected' | 'disconnected' | 'error';
+  connectionStatus: 'connecting' | 'connected' | 'disconnected' | 'error' | 'disabled';
   lastUpdate: RealtimeUpdate | null;
   execution: StepFunctionsExecution | null;
   progress: ProgressInfo | null;
@@ -54,6 +54,7 @@ export interface UseStepFunctionsRealtimeReturn {
   disconnect: () => void;
   isConnected: boolean;
   error: string | null;
+  isRealtimeEnabled: boolean;
 }
 
 export function useStepFunctionsRealtime({
@@ -65,16 +66,19 @@ export function useStepFunctionsRealtime({
   autoReconnect = true,
   reconnectInterval = 5000
 }: UseStepFunctionsRealtimeProps = {}): UseStepFunctionsRealtimeReturn {
-  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'error'>('disconnected');
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'error' | 'disabled'>('disconnected');
   const [lastUpdate, setLastUpdate] = useState<RealtimeUpdate | null>(null);
   const [execution, setExecution] = useState<StepFunctionsExecution | null>(null);
   const [progress, setProgress] = useState<ProgressInfo | null>(null);
   const [steps, setSteps] = useState<ProcessingStep[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [isRealtimeEnabled, setIsRealtimeEnabled] = useState<boolean>(true);
 
   const eventSourceRef = useRef<EventSource | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const connectionIdRef = useRef<string | null>(null);
+  const maxReconnectAttempts = useRef<number>(3);
+  const reconnectAttempts = useRef<number>(0);
 
   const handleMessage = useCallback((update: RealtimeUpdate) => {
     console.log('Realtime update received:', update);
@@ -132,8 +136,24 @@ export function useStepFunctionsRealtime({
   }, [onUpdate, onExecutionStatusChange, onProgressChange, onStepChange]);
 
   const connect = useCallback(() => {
+    // Check if real-time is disabled
+    if (!isRealtimeEnabled) {
+      console.log('Real-time updates disabled - skipping connection');
+      setConnectionStatus('disabled');
+      return;
+    }
+
     if (eventSourceRef.current?.readyState === EventSource.OPEN) {
       return; // Already connected
+    }
+
+    // Check if we've exceeded max reconnect attempts
+    if (reconnectAttempts.current >= maxReconnectAttempts.current) {
+      console.warn('Max reconnect attempts reached - disabling real-time updates');
+      setConnectionStatus('disabled');
+      setIsRealtimeEnabled(false);
+      setError('Real-time updates unavailable - working in offline mode');
+      return;
     }
 
     setConnectionStatus('connecting');
@@ -151,13 +171,26 @@ export function useStepFunctionsRealtime({
     const url = `/api/websocket/events?${params.toString()}`;
 
     try {
+      // Add timeout for connection attempts
+      const connectionTimeout = setTimeout(() => {
+        console.warn('SSE connection timeout - falling back to polling mode');
+        if (eventSourceRef.current) {
+          eventSourceRef.current.close();
+        }
+        reconnectAttempts.current++;
+        setConnectionStatus('error');
+        setError('Connection timeout - working in offline mode');
+      }, 10000); // 10 second timeout
+
       const eventSource = new EventSource(url);
       eventSourceRef.current = eventSource;
 
       eventSource.onopen = () => {
+        clearTimeout(connectionTimeout);
         console.log('SSE connection opened');
         setConnectionStatus('connected');
         setError(null);
+        reconnectAttempts.current = 0; // Reset attempts on successful connection
 
         // Clear any pending reconnect timeout
         if (reconnectTimeoutRef.current) {
@@ -172,21 +205,34 @@ export function useStepFunctionsRealtime({
           handleMessage(update);
         } catch (parseError) {
           console.error('Failed to parse SSE message:', parseError);
+          // Don't treat parse errors as connection failures
         }
       };
 
       eventSource.onerror = (event) => {
+        clearTimeout(connectionTimeout);
         console.error('SSE connection error:', event);
-        setConnectionStatus('error');
-        setError('Connection error');
+        reconnectAttempts.current++;
 
         // Close the connection
         eventSource.close();
 
-        // Auto-reconnect if enabled
+        // Check if we should continue retrying
+        if (reconnectAttempts.current >= maxReconnectAttempts.current) {
+          console.warn('Max reconnect attempts reached - disabling real-time updates');
+          setConnectionStatus('disabled');
+          setIsRealtimeEnabled(false);
+          setError('Real-time updates unavailable - working in offline mode');
+          return;
+        }
+
+        setConnectionStatus('error');
+        setError(`Connection error (attempt ${reconnectAttempts.current}/${maxReconnectAttempts.current})`);
+
+        // Auto-reconnect if enabled and under attempt limit
         if (autoReconnect && !reconnectTimeoutRef.current) {
           reconnectTimeoutRef.current = setTimeout(() => {
-            console.log('Attempting to reconnect...');
+            console.log(`Attempting to reconnect... (${reconnectAttempts.current}/${maxReconnectAttempts.current})`);
             reconnectTimeoutRef.current = null;
             connect();
           }, reconnectInterval);
@@ -195,10 +241,17 @@ export function useStepFunctionsRealtime({
 
     } catch (connectionError) {
       console.error('Failed to create EventSource:', connectionError);
+      reconnectAttempts.current++;
       setConnectionStatus('error');
-      setError('Failed to establish connection');
+      setError('Failed to establish connection - working in offline mode');
+
+      // Disable real-time if we can't even create the EventSource
+      if (reconnectAttempts.current >= 2) {
+        setIsRealtimeEnabled(false);
+        setConnectionStatus('disabled');
+      }
     }
-  }, [executionId, autoReconnect, reconnectInterval, handleMessage]);
+  }, [executionId, autoReconnect, reconnectInterval, handleMessage, isRealtimeEnabled]);
 
   const disconnect = useCallback(() => {
     console.log('Disconnecting from realtime updates');
@@ -219,16 +272,24 @@ export function useStepFunctionsRealtime({
     connectionIdRef.current = null;
   }, []);
 
-  // Auto-connect effect
+  // Auto-connect effect - only in development or when explicitly enabled
   useEffect(() => {
-    if (executionId) {
-      connect();
+    if (executionId && isRealtimeEnabled) {
+      // Add a small delay to prevent immediate connection attempts
+      const connectTimer = setTimeout(() => {
+        connect();
+      }, 1000);
+
+      return () => {
+        clearTimeout(connectTimer);
+        disconnect();
+      };
     }
 
     return () => {
       disconnect();
     };
-  }, [executionId, connect, disconnect]);
+  }, [executionId, connect, disconnect, isRealtimeEnabled]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -248,7 +309,8 @@ export function useStepFunctionsRealtime({
     connect,
     disconnect,
     isConnected,
-    error
+    error,
+    isRealtimeEnabled
   };
 }
 
@@ -259,6 +321,10 @@ export async function broadcastStepFunctionsUpdate(
   executionId?: string
 ): Promise<boolean> {
   try {
+    // Add timeout to prevent hanging requests
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
     const response = await fetch('/api/websocket/events', {
       method: 'POST',
       headers: {
@@ -268,20 +334,27 @@ export async function broadcastStepFunctionsUpdate(
         type,
         data,
         executionId
-      })
+      }),
+      signal: controller.signal
     });
 
+    clearTimeout(timeoutId);
+
     if (!response.ok) {
-      console.error('Failed to broadcast update:', await response.text());
+      console.warn('Failed to broadcast update - service may be unavailable:', response.status);
       return false;
     }
 
     const result = await response.json();
-    console.log(`Broadcasted update to ${result.broadcastCount} connections`);
+    console.log(`Broadcasted update to ${result.broadcastCount || 0} connections`);
     return true;
 
   } catch (error) {
-    console.error('Broadcast error:', error);
+    if (error instanceof Error && error.name === 'AbortError') {
+      console.warn('Broadcast timeout - WebSocket service may be unavailable');
+    } else {
+      console.warn('Broadcast error - working in offline mode:', error);
+    }
     return false;
   }
 }

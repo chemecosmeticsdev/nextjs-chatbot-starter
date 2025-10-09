@@ -32,6 +32,8 @@ import {
 } from 'lucide-react';
 import { StepFunctionsRealtimeProvider, ConnectionStatus, RealtimeDebugPanel } from '@/lib/providers/step-functions-realtime-provider';
 import { useStepFunctionsRealtime } from '@/lib/hooks/use-step-functions-realtime';
+import { ErrorBoundary } from '@/components/error-boundary';
+import { EnhancedUploadForm } from '@/components/step-functions/enhanced-upload-form';
 
 interface StepFunctionsUploadSettings {
   autoStart: boolean;
@@ -69,9 +71,6 @@ interface ExecutionInfo {
 }
 
 function StepFunctionsUploadForm() {
-  const [selectedFiles, setSelectedFiles] = useState<FileItem[]>([]);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
   const [executions, setExecutions] = useState<ExecutionInfo[]>([]);
   const [settings, setSettings] = useState<StepFunctionsUploadSettings>({
     autoStart: true,
@@ -79,8 +78,6 @@ function StepFunctionsUploadForm() {
     documentType: 'inci',
     documentCategory: 'technical_data'
   });
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Real-time Step Functions updates
   const realtimeState = useStepFunctionsRealtime({
@@ -112,209 +109,9 @@ function StepFunctionsUploadForm() {
           }
         });
 
-        // Update file status based on execution updates
-        setSelectedFiles(prev => prev.map(file => {
-          if (file.executionId === update.data.execution.id) {
-            return {
-              ...file,
-              status: update.data.execution.status === 'SUCCEEDED' ? 'completed' :
-                     update.data.execution.status === 'FAILED' ? 'failed' : 'processing',
-              processingProgress: update.data.progress?.percentage || file.processingProgress
-            };
-          }
-          return file;
-        }));
       }
     }
   });
-
-  const validateFile = (file: File): { valid: boolean; error?: string } => {
-    const maxSize = 50 * 1024 * 1024; // 50MB
-    if (file.size > maxSize) {
-      return { valid: false, error: 'File too large (max 50MB)' };
-    }
-
-    const supportedTypes = [
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'text/plain',
-      'text/markdown',
-      'application/rtf',
-      'image/jpeg',
-      'image/png',
-      'image/tiff'
-    ];
-
-    if (!supportedTypes.includes(file.type)) {
-      return { valid: false, error: 'Unsupported file type' };
-    }
-
-    return { valid: true };
-  };
-
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files);
-      const validFiles: FileItem[] = [];
-
-      files.forEach(file => {
-        const validation = validateFile(file);
-        if (validation.valid) {
-          validFiles.push({
-            id: `${file.name}-${file.size}-${Date.now()}`,
-            file,
-            status: 'pending',
-            uploadProgress: 0
-          });
-        } else {
-          setUploadError(validation.error || 'File validation failed');
-        }
-      });
-
-      setSelectedFiles(prev => [...prev, ...validFiles]);
-    }
-  }, []);
-
-  const removeFile = useCallback((fileId: string) => {
-    setSelectedFiles(prev => prev.filter(f => f.id !== fileId));
-  }, []);
-
-  const handleUpload = useCallback(async () => {
-    if (selectedFiles.length === 0) return;
-
-    setIsUploading(true);
-    setUploadError(null);
-
-    try {
-      // Update file status to uploading
-      setSelectedFiles(prev => prev.map(f => ({ ...f, status: 'uploading', uploadProgress: 0 })));
-
-      for (const fileItem of selectedFiles) {
-        const formData = new FormData();
-        formData.append('file', fileItem.file);
-        formData.append('uploadedBy', settings.uploadedBy || 'step-functions-user');
-        formData.append('documentType', settings.documentType);
-        formData.append('documentCategory', settings.documentCategory);
-        formData.append('autoStart', settings.autoStart.toString());
-
-        if (settings.supplierName) {
-          formData.append('metadata', JSON.stringify({
-            supplierName: settings.supplierName,
-            ingredientName: settings.ingredientName
-          }));
-        }
-
-        // Upload file to Step Functions endpoint
-        const uploadResponse = await fetch('/api/step-functions/upload', {
-          method: 'POST',
-          body: formData
-        });
-
-        if (!uploadResponse.ok) {
-          throw new Error(`Upload failed: ${uploadResponse.statusText}`);
-        }
-
-        const uploadResult = await uploadResponse.json();
-
-        if (!uploadResult.success) {
-          throw new Error(uploadResult.error || 'Upload failed');
-        }
-
-        // Update file with upload results
-        setSelectedFiles(prev => prev.map(f =>
-          f.id === fileItem.id ? {
-            ...f,
-            status: uploadResult.execution ? 'processing' : 'uploaded',
-            uploadProgress: 100,
-            fileKey: uploadResult.file.fileKey,
-            executionId: uploadResult.execution?.id
-          } : f
-        ));
-
-        // If execution was started, add to executions list
-        if (uploadResult.execution) {
-          setExecutions(prev => [...prev, {
-            id: uploadResult.execution.id,
-            fileName: uploadResult.file.fileName,
-            status: uploadResult.execution.status,
-            startedAt: uploadResult.execution.startedAt,
-            progress: 0
-          }]);
-        }
-      }
-
-    } catch (error) {
-      console.error('Upload error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Upload failed';
-      setUploadError(errorMessage);
-
-      setSelectedFiles(prev => prev.map(f => ({
-        ...f,
-        status: 'failed',
-        error: errorMessage
-      })));
-    } finally {
-      setIsUploading(false);
-    }
-  }, [selectedFiles, settings]);
-
-  const startProcessing = useCallback(async (fileItem: FileItem) => {
-    if (!fileItem.fileKey) return;
-
-    try {
-      const response = await fetch('/api/step-functions/start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fileName: fileItem.file.name,
-          fileKey: fileItem.fileKey,
-          fileSize: fileItem.file.size,
-          mimeType: fileItem.file.type,
-          uploadedBy: settings.uploadedBy,
-          documentType: settings.documentType,
-          documentCategory: settings.documentCategory
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to start processing: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-
-      setSelectedFiles(prev => prev.map(f =>
-        f.id === fileItem.id ? {
-          ...f,
-          status: 'processing',
-          executionId: result.execution.id
-        } : f
-      ));
-
-      setExecutions(prev => [...prev, {
-        id: result.execution.id,
-        fileName: fileItem.file.name,
-        status: result.execution.status,
-        startedAt: result.execution.startedAt,
-        progress: 0
-      }]);
-
-    } catch (error) {
-      console.error('Start processing error:', error);
-      setSelectedFiles(prev => prev.map(f =>
-        f.id === fileItem.id ? {
-          ...f,
-          status: 'failed',
-          error: error instanceof Error ? error.message : 'Failed to start processing'
-        } : f
-      ));
-    }
-  }, [settings]);
-
-  const clearCompleted = useCallback(() => {
-    setSelectedFiles(prev => prev.filter(f => !['completed', 'failed'].includes(f.status)));
-    setExecutions(prev => prev.filter(e => !['SUCCEEDED', 'FAILED'].includes(e.status)));
-  }, []);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -390,116 +187,33 @@ function StepFunctionsUploadForm() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {/* File Selection */}
-                <div
-                  className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-lg font-medium mb-2">Drop files here or click to browse</p>
-                  <p className="text-sm text-gray-600">PDF, Word, Images, and more (max 50MB each)</p>
-                </div>
-
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  multiple
-                  accept=".pdf,.doc,.docx,.txt,.md,.rtf,.jpg,.jpeg,.png,.tiff"
-                  onChange={handleFileSelect}
-                  className="hidden"
+              <ErrorBoundary>
+                <EnhancedUploadForm
+                  settings={settings}
+                  onFileUploaded={(result) => {
+                    console.log('File uploaded:', result);
+                    if (result.execution) {
+                      setExecutions(prev => [...prev, {
+                        id: result.execution.id,
+                        fileName: result.file.fileName,
+                        status: result.execution.status,
+                        startedAt: result.execution.startedAt,
+                        progress: 0
+                      }]);
+                    }
+                  }}
+                  onExecutionStarted={(execution) => {
+                    console.log('Execution started:', execution);
+                    setExecutions(prev => [...prev, {
+                      id: execution.id,
+                      fileName: execution.fileName,
+                      status: execution.status,
+                      startedAt: execution.startedAt,
+                      progress: 0
+                    }]);
+                  }}
                 />
-
-                {/* Upload Error */}
-                {uploadError && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{uploadError}</AlertDescription>
-                  </Alert>
-                )}
-
-                {/* Selected Files */}
-                {selectedFiles.length > 0 && (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-medium">Selected Files ({selectedFiles.length})</h4>
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={handleUpload}
-                          disabled={isUploading || selectedFiles.every(f => f.status !== 'pending')}
-                          size="sm"
-                        >
-                          <Upload className="h-4 w-4 mr-2" />
-                          Upload Files
-                        </Button>
-                        <Button onClick={clearCompleted} variant="outline" size="sm">
-                          Clear Completed
-                        </Button>
-                      </div>
-                    </div>
-
-                    {selectedFiles.map((fileItem) => (
-                      <Card key={fileItem.id} className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3 flex-1">
-                            <FileText className="h-5 w-5 text-blue-600" />
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium truncate">{fileItem.file.name}</p>
-                              <p className="text-sm text-gray-600">
-                                {(fileItem.file.size / 1024 / 1024).toFixed(2)} MB
-                              </p>
-                              {fileItem.status === 'uploading' && (
-                                <Progress value={fileItem.uploadProgress} className="mt-2 h-2" />
-                              )}
-                              {fileItem.status === 'processing' && fileItem.processingProgress !== undefined && (
-                                <Progress value={fileItem.processingProgress} className="mt-2 h-2" />
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <Badge variant={
-                              fileItem.status === 'completed' ? 'default' :
-                              fileItem.status === 'failed' ? 'destructive' :
-                              fileItem.status === 'processing' ? 'secondary' : 'outline'
-                            }>
-                              {fileItem.status}
-                            </Badge>
-                            {getStatusIcon(fileItem.status)}
-
-                            {fileItem.status === 'uploaded' && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => startProcessing(fileItem)}
-                              >
-                                <Play className="h-4 w-4" />
-                              </Button>
-                            )}
-
-                            {fileItem.status === 'pending' && (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => removeFile(fileItem.id)}
-                              >
-                                <AlertCircle className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-
-                        {fileItem.error && (
-                          <Alert variant="destructive" className="mt-3">
-                            <AlertCircle className="h-4 w-4" />
-                            <AlertDescription>{fileItem.error}</AlertDescription>
-                          </Alert>
-                        )}
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </div>
+              </ErrorBoundary>
             </CardContent>
           </Card>
 
@@ -706,8 +420,10 @@ export default function StepFunctionsUploadPage() {
   });
 
   return (
-    <StepFunctionsRealtimeProvider>
-      <StepFunctionsUploadForm />
-    </StepFunctionsRealtimeProvider>
+    <ErrorBoundary>
+      <StepFunctionsRealtimeProvider>
+        <StepFunctionsUploadForm />
+      </StepFunctionsRealtimeProvider>
+    </ErrorBoundary>
   );
 }
