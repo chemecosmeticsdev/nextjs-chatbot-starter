@@ -1,0 +1,368 @@
+{
+  "Comment": "Document Processing Workflow for Chatbot Alternative Pipeline",
+  "StartAt": "ValidateInput",
+  "States": {
+    "ValidateInput": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "document-processor-validate",
+        "Payload": {
+          "executionId.$": "$$.Execution.Name",
+          "input.$": "$"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException"],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleValidationFailure",
+          "ResultPath": "$.error"
+        }
+      ],
+      "Next": "FileValidation",
+      "ResultPath": "$.validation"
+    },
+
+    "FileValidation": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "document-processor-file-validation",
+        "Payload": {
+          "executionId.$": "$$.Execution.Name",
+          "documentId.$": "$.documentId",
+          "s3Key.$": "$.s3Key",
+          "s3Bucket.$": "$.s3Bucket",
+          "userId.$": "$.userId"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException"],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 3,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleFileValidationFailure",
+          "ResultPath": "$.error"
+        }
+      ],
+      "Next": "OCRProcessing",
+      "ResultPath": "$.fileValidation"
+    },
+
+    "OCRProcessing": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "document-processor-ocr",
+        "Payload": {
+          "executionId.$": "$$.Execution.Name",
+          "documentId.$": "$.documentId",
+          "s3Key.$": "$.s3Key",
+          "s3Bucket.$": "$.s3Bucket",
+          "fileType.$": "$.fileValidation.Payload.fileType"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException"],
+          "IntervalSeconds": 4,
+          "MaxAttempts": 3,
+          "BackoffRate": 2.0
+        },
+        {
+          "ErrorEquals": ["Textract.ThrottlingException"],
+          "IntervalSeconds": 10,
+          "MaxAttempts": 5,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleOCRFailure",
+          "ResultPath": "$.error"
+        }
+      ],
+      "Next": "MetadataEnhancement",
+      "ResultPath": "$.ocr",
+      "TimeoutSeconds": 300
+    },
+
+    "MetadataEnhancement": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "document-processor-metadata",
+        "Payload": {
+          "executionId.$": "$$.Execution.Name",
+          "documentId.$": "$.documentId",
+          "extractedText.$": "$.ocr.Payload.extractedText",
+          "textract.$": "$.ocr.Payload.textract",
+          "originalFilename.$": "$.originalFilename"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException"],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 3,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleMetadataFailure",
+          "ResultPath": "$.error"
+        }
+      ],
+      "Next": "DocumentChunking",
+      "ResultPath": "$.metadata"
+    },
+
+    "DocumentChunking": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "document-processor-chunking",
+        "Payload": {
+          "executionId.$": "$$.Execution.Name",
+          "documentId.$": "$.documentId",
+          "extractedText.$": "$.ocr.Payload.extractedText",
+          "metadata.$": "$.metadata.Payload"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException"],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 3,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleChunkingFailure",
+          "ResultPath": "$.error"
+        }
+      ],
+      "Next": "VectorEmbedding",
+      "ResultPath": "$.chunks",
+      "TimeoutSeconds": 180
+    },
+
+    "VectorEmbedding": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "document-processor-embedding",
+        "Payload": {
+          "executionId.$": "$$.Execution.Name",
+          "documentId.$": "$.documentId",
+          "chunks.$": "$.chunks.Payload.chunks",
+          "model": "amazon.titan-embed-text-v2:0"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException"],
+          "IntervalSeconds": 4,
+          "MaxAttempts": 3,
+          "BackoffRate": 2.0
+        },
+        {
+          "ErrorEquals": ["Bedrock.ThrottlingException", "Bedrock.ModelTimeoutException"],
+          "IntervalSeconds": 8,
+          "MaxAttempts": 5,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleEmbeddingFailure",
+          "ResultPath": "$.error"
+        }
+      ],
+      "Next": "DatabaseInsertion",
+      "ResultPath": "$.embeddings",
+      "TimeoutSeconds": 300
+    },
+
+    "DatabaseInsertion": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "document-processor-db-insert",
+        "Payload": {
+          "executionId.$": "$$.Execution.Name",
+          "documentId.$": "$.documentId",
+          "chunks.$": "$.chunks.Payload.chunks",
+          "embeddings.$": "$.embeddings.Payload.embeddings",
+          "metadata.$": "$.metadata.Payload",
+          "userId.$": "$.userId"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException"],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 3,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleDatabaseFailure",
+          "ResultPath": "$.error"
+        }
+      ],
+      "Next": "NotifySuccess",
+      "ResultPath": "$.dbResult"
+    },
+
+    "NotifySuccess": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "document-processor-notify",
+        "Payload": {
+          "executionId.$": "$$.Execution.Name",
+          "documentId.$": "$.documentId",
+          "status": "SUCCESS",
+          "userId.$": "$.userId",
+          "totalChunks.$": "$.chunks.Payload.totalChunks",
+          "processingTime.$": "$$.State.EnteredTime"
+        }
+      },
+      "End": true
+    },
+
+    "HandleValidationFailure": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "document-processor-error-handler",
+        "Payload": {
+          "executionId.$": "$$.Execution.Name",
+          "stage": "VALIDATION",
+          "error.$": "$.error",
+          "input.$": "$"
+        }
+      },
+      "Next": "FailureState"
+    },
+
+    "HandleFileValidationFailure": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "document-processor-error-handler",
+        "Payload": {
+          "executionId.$": "$$.Execution.Name",
+          "stage": "FILE_VALIDATION",
+          "error.$": "$.error",
+          "documentId.$": "$.documentId"
+        }
+      },
+      "Next": "FailureState"
+    },
+
+    "HandleOCRFailure": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "document-processor-error-handler",
+        "Payload": {
+          "executionId.$": "$$.Execution.Name",
+          "stage": "OCR_PROCESSING",
+          "error.$": "$.error",
+          "documentId.$": "$.documentId"
+        }
+      },
+      "Next": "FailureState"
+    },
+
+    "HandleMetadataFailure": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "document-processor-error-handler",
+        "Payload": {
+          "executionId.$": "$$.Execution.Name",
+          "stage": "METADATA_ENHANCEMENT",
+          "error.$": "$.error",
+          "documentId.$": "$.documentId"
+        }
+      },
+      "Next": "FailureState"
+    },
+
+    "HandleChunkingFailure": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "document-processor-error-handler",
+        "Payload": {
+          "executionId.$": "$$.Execution.Name",
+          "stage": "DOCUMENT_CHUNKING",
+          "error.$": "$.error",
+          "documentId.$": "$.documentId"
+        }
+      },
+      "Next": "FailureState"
+    },
+
+    "HandleEmbeddingFailure": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "document-processor-error-handler",
+        "Payload": {
+          "executionId.$": "$$.Execution.Name",
+          "stage": "VECTOR_EMBEDDING",
+          "error.$": "$.error",
+          "documentId.$": "$.documentId"
+        }
+      },
+      "Next": "FailureState"
+    },
+
+    "HandleDatabaseFailure": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "document-processor-error-handler",
+        "Payload": {
+          "executionId.$": "$$.Execution.Name",
+          "stage": "DATABASE_INSERTION",
+          "error.$": "$.error",
+          "documentId.$": "$.documentId"
+        }
+      },
+      "Next": "FailureState"
+    },
+
+    "FailureState": {
+      "Type": "Fail",
+      "Cause": "Document processing failed",
+      "Error": "DocumentProcessingError"
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "name": "document-processor-metadata-enhancement",
+  "version": "1.0.0",
+  "description": "Lambda function for enhancing document metadata with AI-powered extraction and classification",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.1690.0",
+    "pg": "^8.11.3"
+  },
+  "keywords": [
+    "aws",
+    "lambda",
+    "stepfunctions",
+    "metadata",
+    "classification",
+    "nlp",
+    "bedrock"
+  ],
+  "author": "Chatbot Alternative Pipeline",
+  "license": "MIT"
+}

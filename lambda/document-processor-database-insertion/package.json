@@ -1,0 +1,25 @@
+{
+  "name": "document-processor-database-insertion",
+  "version": "1.0.0",
+  "description": "Lambda function for inserting processed document data and vector embeddings into the database",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.1690.0",
+    "pg": "^8.11.3",
+    "uuid": "^9.0.1"
+  },
+  "keywords": [
+    "aws",
+    "lambda",
+    "stepfunctions",
+    "database",
+    "postgresql",
+    "vector",
+    "embeddings"
+  ],
+  "author": "Chatbot Alternative Pipeline",
+  "license": "MIT"
+}

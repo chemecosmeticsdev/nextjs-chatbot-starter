@@ -1,0 +1,24 @@
+{
+  "name": "document-processor-embedding",
+  "version": "1.0.0",
+  "description": "Lambda function for generating vector embeddings using AWS Bedrock Titan v2 in the Step Functions document processing pipeline",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.1690.0",
+    "pg": "^8.11.3"
+  },
+  "keywords": [
+    "aws",
+    "lambda",
+    "stepfunctions",
+    "bedrock",
+    "titan",
+    "embeddings",
+    "vector"
+  ],
+  "author": "Chatbot Alternative Pipeline",
+  "license": "MIT"
+}
