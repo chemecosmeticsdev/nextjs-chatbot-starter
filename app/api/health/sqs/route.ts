@@ -2,6 +2,7 @@
  * SQS Health Check API Endpoint
  * Provides real-time monitoring of SQS connectivity and job queue status
  * Also provides backup initialization of job queue manager
+ * Updated: 2025-10-09 - Force environment variable refresh
  */
 
 import { NextRequest, NextResponse } from 'next/server';
