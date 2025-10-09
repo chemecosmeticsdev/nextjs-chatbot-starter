@@ -121,7 +121,7 @@ export function PipelineVisualization({
 
   // Transform steps data into pipeline steps
   const pipelineSteps: PipelineStep[] = useMemo(() => {
-    const stepOrder = ['ValidateFile', 'ProcessOCR', 'ChunkDocument', 'GenerateEmbeddings', 'InsertDatabase', 'EnhanceMetadata'];
+    const stepOrder = ['ValidateFile', 'ProcessOCR', 'EnhanceMetadata', 'ChunkDocument', 'GenerateEmbeddings', 'InsertDatabase'];
 
     return stepOrder.map((stepName, index) => {
       const stepDef = STEP_DEFINITIONS[stepName];

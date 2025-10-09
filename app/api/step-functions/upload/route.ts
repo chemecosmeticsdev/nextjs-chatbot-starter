@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { S3 } from 'aws-sdk';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { Upload } from '@aws-sdk/lib-storage';
 import { v4 as uuidv4 } from 'uuid';
 
 // Initialize AWS S3
-const s3 = new S3({
+const s3 = new S3Client({
   region: process.env.DEFAULT_REGION || 'ap-southeast-1',
-  accessKeyId: process.env.BAWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.BAWS_SECRET_ACCESS_KEY,
+  credentials: {
+    accessKeyId: process.env.BAWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.BAWS_SECRET_ACCESS_KEY!,
+  },
 });
 
 // Supported file types for document processing
@@ -107,7 +111,12 @@ export async function POST(request: NextRequest) {
       ServerSideEncryption: 'AES256'
     };
 
-    const uploadResult = await s3.upload(uploadParams).promise();
+    const upload = new Upload({
+      client: s3,
+      params: uploadParams,
+    });
+
+    const uploadResult = await upload.done();
 
     console.log('File uploaded successfully:', {
       location: uploadResult.Location,
@@ -224,18 +233,19 @@ export async function GET(request: NextRequest) {
     const fileKey = `uploads/${new Date().getFullYear()}/${new Date().getMonth() + 1}/${fileId}-${sanitizedFileName}`;
 
     // Generate presigned URL
-    const presignedUrl = s3.getSignedUrl('putObject', {
+    const command = new PutObjectCommand({
       Bucket: BUCKET_NAME,
       Key: fileKey,
       ContentType: mimeType,
       ContentLength: fileSize,
-      Expires: 3600, // 1 hour expiry
       Metadata: {
         'original-filename': fileName,
         'upload-timestamp': new Date().toISOString(),
         'file-id': fileId
       }
     });
+
+    const presignedUrl = await getSignedUrl(s3, command, { expiresIn: 3600 });
 
     return NextResponse.json({
       presignedUrl,
@@ -323,10 +333,10 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Delete from S3
-    await s3.deleteObject({
+    await s3.send(new DeleteObjectCommand({
       Bucket: BUCKET_NAME,
       Key: fileKey
-    }).promise();
+    }));
 
     return NextResponse.json({
       success: true,

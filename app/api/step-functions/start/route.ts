@@ -1,20 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { StepFunctions, S3 } from 'aws-sdk';
+import { SFNClient, StartExecutionCommand, ListStateMachinesCommand } from '@aws-sdk/client-sfn';
+import { S3Client, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '@/lib/db';
 import { stepFunctionExecutions } from '@/lib/db/schema';
 
 // Initialize AWS services
-const stepFunctions = new StepFunctions({
+const stepFunctions = new SFNClient({
   region: process.env.DEFAULT_REGION || 'ap-southeast-1',
-  accessKeyId: process.env.BAWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.BAWS_SECRET_ACCESS_KEY,
+  credentials: {
+    accessKeyId: process.env.BAWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.BAWS_SECRET_ACCESS_KEY!,
+  },
 });
 
-const s3 = new S3({
+const s3 = new S3Client({
   region: process.env.DEFAULT_REGION || 'ap-southeast-1',
-  accessKeyId: process.env.BAWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.BAWS_SECRET_ACCESS_KEY,
+  credentials: {
+    accessKeyId: process.env.BAWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.BAWS_SECRET_ACCESS_KEY!,
+  },
 });
 
 interface StartExecutionRequest {
@@ -49,10 +54,10 @@ export async function POST(request: NextRequest) {
     const bucketName = process.env.STEPFUNCTIONS_S3_BUCKET || 'stepfunctions-document-processing';
 
     try {
-      await s3.headObject({
+      await s3.send(new HeadObjectCommand({
         Bucket: bucketName,
         Key: fileKey
-      }).promise();
+      }));
     } catch (s3Error) {
       console.error('File not found in S3:', s3Error);
       return NextResponse.json(
@@ -98,7 +103,7 @@ export async function POST(request: NextRequest) {
       fileKey
     });
 
-    const executionResult = await stepFunctions.startExecution(executionParams).promise();
+    const executionResult = await stepFunctions.send(new StartExecutionCommand(executionParams));
 
     // Store execution record in database
     try {
@@ -167,7 +172,7 @@ export async function GET() {
 
     // Try to list state machines to verify connectivity
     try {
-      const result = await stepFunctions.listStateMachines({ maxResults: 1 }).promise();
+      const result = await stepFunctions.send(new ListStateMachinesCommand({ maxResults: 1 }));
 
       return NextResponse.json({
         configured: true,

@@ -106,7 +106,7 @@
       "Type": "Task",
       "Resource": "arn:aws:states:::lambda:invoke",
       "Parameters": {
-        "FunctionName": "document-processor-metadata",
+        "FunctionName": "document-processor-metadata-enhancement",
         "Payload": {
           "executionId.$": "$$.Execution.Name",
           "documentId.$": "$.documentId",
@@ -208,7 +208,7 @@
       "Type": "Task",
       "Resource": "arn:aws:states:::lambda:invoke",
       "Parameters": {
-        "FunctionName": "document-processor-db-insert",
+        "FunctionName": "document-processor-database-insertion",
         "Payload": {
           "executionId.$": "$$.Execution.Name",
           "documentId.$": "$.documentId",

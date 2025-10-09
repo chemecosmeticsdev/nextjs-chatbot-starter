@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { StepFunctions } from 'aws-sdk';
+import { SFNClient, DescribeExecutionCommand, StopExecutionCommand } from '@aws-sdk/client-sfn';
 import { db } from '@/lib/db';
 import { stepFunctionExecutions, processingSteps } from '@/lib/db/schema';
 import { eq, desc } from 'drizzle-orm';
 
 // Initialize AWS Step Functions
-const stepFunctions = new StepFunctions({
+const stepFunctions = new SFNClient({
   region: process.env.DEFAULT_REGION || 'ap-southeast-1',
-  accessKeyId: process.env.BAWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.BAWS_SECRET_ACCESS_KEY,
+  credentials: {
+    accessKeyId: process.env.BAWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.BAWS_SECRET_ACCESS_KEY!,
+  },
 });
 
 export async function GET(
@@ -44,9 +46,9 @@ export async function GET(
     // Get current status from Step Functions
     let stepFunctionsStatus = null;
     try {
-      const describeResult = await stepFunctions.describeExecution({
+      const describeResult = await stepFunctions.send(new DescribeExecutionCommand({
         executionArn: execution.executionArn
-      }).promise();
+      }));
 
       stepFunctionsStatus = {
         status: describeResult.status,
@@ -209,10 +211,10 @@ export async function PUT(
     if (body.action === 'cancel') {
       try {
         // Stop the Step Functions execution
-        await stepFunctions.stopExecution({
+        await stepFunctions.send(new StopExecutionCommand({
           executionArn: execution.executionArn,
           cause: 'User requested cancellation'
-        }).promise();
+        }));
 
         // Update database
         await db

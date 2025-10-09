@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { StepFunctions } from 'aws-sdk';
+import { SFNClient, StartExecutionCommand } from '@aws-sdk/client-sfn';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '@/lib/db';
 import { stepFunctionExecutions, processingSteps } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
 // Initialize AWS Step Functions
-const stepFunctions = new StepFunctions({
+const stepFunctions = new SFNClient({
   region: process.env.DEFAULT_REGION || 'ap-southeast-1',
-  accessKeyId: process.env.BAWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.BAWS_SECRET_ACCESS_KEY,
+  credentials: {
+    accessKeyId: process.env.BAWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.BAWS_SECRET_ACCESS_KEY!,
+  },
 });
 
 interface RetryRequest {
@@ -110,7 +112,7 @@ export async function POST(request: NextRequest) {
       fileName: original.fileName
     });
 
-    const executionResult = await stepFunctions.startExecution(executionParams).promise();
+    const executionResult = await stepFunctions.send(new StartExecutionCommand(executionParams));
 
     // Store new execution record
     await db.insert(stepFunctionExecutions).values({

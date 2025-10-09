@@ -262,6 +262,96 @@ function extractKeywords(text, limit = 20) {
     .map(([word]) => word);
 }
 
+// Create minimal metadata for fallback scenarios
+function createMinimalMetadata(originalFilename, extractedText = '') {
+  console.log('Creating minimal metadata as fallback');
+
+  // Basic filename analysis
+  const filenameLower = originalFilename.toLowerCase();
+
+  // Guess document type from filename
+  let documentType = 'other';
+  if (filenameLower.includes('sds') || filenameLower.includes('safety')) {
+    documentType = 'sds';
+  } else if (filenameLower.includes('spec') || filenameLower.includes('datasheet')) {
+    documentType = 'specification';
+  } else if (filenameLower.includes('coa') || filenameLower.includes('analysis')) {
+    documentType = 'certificate_of_analysis';
+  } else if (filenameLower.includes('halal')) {
+    documentType = 'halal_certificate';
+  } else if (filenameLower.includes('kosher')) {
+    documentType = 'kosher_certificate';
+  }
+
+  // Basic metadata structure
+  const metadata = {
+    // Entity extraction (minimal)
+    casNumbers: [],
+    ecNumbers: [],
+    inciNames: [],
+
+    // Classification (filename-based)
+    ragDocumentType: documentType,
+    complianceTypes: [],
+    productApplications: [],
+    functionCategories: [],
+
+    // Keywords (basic from filename)
+    keywords: originalFilename
+      .toLowerCase()
+      .replace(/\.(pdf|doc|docx|txt)$/i, '')
+      .split(/[_\-\s]+/)
+      .filter(word => word.length > 2),
+
+    // Quality assessment (low for fallback)
+    qualityScore: 25,
+    qualityDimensions: {
+      textLength: extractedText.length,
+      entityExtraction: 0,
+      classificationConfidence: documentType !== 'other' ? 40 : 10,
+      complianceDetection: 0,
+      keywordRichness: 10
+    },
+
+    // Processing metadata
+    enhancementMethod: 'fallback_minimal',
+    enhancedAt: new Date().toISOString(),
+
+    // Initialize arrays
+    chemicalNames: [],
+    allergens: [],
+    batchNumbers: [],
+    lotNumbers: [],
+    certificationBodies: [],
+    supplierName: null,
+    ingredientName: null
+  };
+
+  // If we have some text, try basic pattern matching
+  if (extractedText && extractedText.length > 0) {
+    // Try to extract CAS numbers using basic pattern
+    const casMatches = extractedText.match(CAS_PATTERN);
+    if (casMatches) {
+      metadata.casNumbers = [...new Set(casMatches)].slice(0, 5); // Limit to 5
+      metadata.qualityScore += 10;
+    }
+
+    // Try to extract EC numbers
+    const ecMatches = extractedText.match(EC_PATTERN);
+    if (ecMatches) {
+      metadata.ecNumbers = [...new Set(ecMatches)].slice(0, 5);
+      metadata.qualityScore += 5;
+    }
+
+    // Update quality dimensions
+    metadata.qualityDimensions.entityExtraction = metadata.casNumbers.length + metadata.ecNumbers.length;
+    metadata.qualityDimensions.textLength = extractedText.length;
+  }
+
+  console.log(`Minimal metadata created: type=${documentType}, score=${metadata.qualityScore}`);
+  return metadata;
+}
+
 // Calculate quality score based on various factors
 function calculateQualityScore(metadata, textLength, hasStructuredData) {
   let score = 50; // Base score
@@ -534,15 +624,27 @@ exports.handler = async (event) => {
       throw new Error('Document ID, extracted text, and filename are required');
     }
 
-    if (extractedText.length < 50) {
-      throw new Error('Extracted text too short for meaningful metadata extraction');
-    }
-
     console.log(`Starting metadata enhancement for document ${documentId}`);
     console.log(`Text length: ${extractedText.length} characters`);
 
-    // Enhance document metadata
-    const metadata = await enhanceDocumentMetadata(documentId, extractedText, originalFilename, enableAI);
+    let metadata;
+    let fallbackUsed = false;
+
+    try {
+      // Primary metadata enhancement attempt
+      if (extractedText.length < 50) {
+        console.warn('Text too short for full enhancement, using minimal metadata approach');
+        metadata = createMinimalMetadata(originalFilename);
+        fallbackUsed = true;
+      } else {
+        // Enhance document metadata
+        metadata = await enhanceDocumentMetadata(documentId, extractedText, originalFilename, enableAI);
+      }
+    } catch (enhancementError) {
+      console.warn('Primary metadata enhancement failed, using fallback approach:', enhancementError);
+      metadata = createMinimalMetadata(originalFilename, extractedText);
+      fallbackUsed = true;
+    }
 
     // Validate extraction results
     const validation = validateMetadata(metadata);
@@ -560,6 +662,8 @@ exports.handler = async (event) => {
       metadata,
       validation: validation.quality,
       qualityIssues: validation.issues,
+      fallbackUsed,
+      enhancementMethod: metadata.enhancementMethod,
       updateResult,
       processingTimeMs: Date.now() - startTime,
       timestamp: new Date().toISOString()
