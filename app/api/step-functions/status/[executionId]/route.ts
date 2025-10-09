@@ -27,11 +27,14 @@ export async function GET(
       );
     }
 
+    // Construct execution ARN from executionId
+    const executionArn = `arn:aws:states:${process.env.DEFAULT_REGION}:${process.env.ACCOUNT_ID}:execution:DocumentProcessingPipeline:DocumentProcessing-${executionId}`;
+
     // Get execution record from database
     const executionRecord = await db
       .select()
       .from(stepFunctionExecutions)
-      .where(eq(stepFunctionExecutions.id, executionId))
+      .where(eq(stepFunctionExecutions.executionArn, executionArn))
       .limit(1);
 
     if (executionRecord.length === 0) {
@@ -64,12 +67,12 @@ export async function GET(
           .update(stepFunctionExecutions)
           .set({
             status: describeResult.status,
-            output: stepFunctionsStatus.output,
-            error: stepFunctionsStatus.error,
-            endedAt: describeResult.stopDate || null,
+            outputData: stepFunctionsStatus.output,
+            errorDetails: stepFunctionsStatus.error,
+            completedAt: describeResult.stopDate || null,
             updatedAt: new Date()
           })
-          .where(eq(stepFunctionExecutions.id, executionId));
+          .where(eq(stepFunctionExecutions.executionArn, executionArn));
       }
 
     } catch (stepFunctionsError) {
@@ -78,7 +81,6 @@ export async function GET(
     }
 
     // Get processing steps from database
-    const executionArn = execution.executionArn;
     const steps = await db
       .select()
       .from(processingSteps)
@@ -133,22 +135,22 @@ export async function GET(
     }
 
     // Get processing duration
-    const startTime = execution.startedAt;
-    const endTime = execution.endedAt || (overallStatus === 'RUNNING' ? new Date() : null);
+    const startTime = execution.createdAt;
+    const endTime = execution.completedAt || (overallStatus === 'RUNNING' ? new Date() : null);
     const durationMs = endTime && startTime ? endTime.getTime() - startTime.getTime() : null;
 
     return NextResponse.json({
       execution: {
-        id: execution.id,
+        id: executionId,
         documentId: execution.documentId,
-        fileName: execution.fileName,
+        executionArn: execution.executionArn,
         status: overallStatus,
-        startedAt: execution.startedAt,
-        endedAt: execution.endedAt,
+        startedAt: execution.createdAt,
+        endedAt: execution.completedAt,
         durationMs,
         progress,
         currentStep,
-        error: execution.error || stepFunctionsStatus?.error || null
+        error: execution.errorDetails || stepFunctionsStatus?.error || null
       },
       steps: steps.map(step => ({
         name: step.stepName,
@@ -191,11 +193,14 @@ export async function PUT(
       );
     }
 
+    // Construct execution ARN from executionId
+    const executionArn = `arn:aws:states:${process.env.DEFAULT_REGION}:${process.env.ACCOUNT_ID}:execution:DocumentProcessingPipeline:DocumentProcessing-${executionId}`;
+
     // Get execution record
     const executionRecord = await db
       .select()
       .from(stepFunctionExecutions)
-      .where(eq(stepFunctionExecutions.id, executionId))
+      .where(eq(stepFunctionExecutions.executionArn, executionArn))
       .limit(1);
 
     if (executionRecord.length === 0) {
@@ -221,10 +226,10 @@ export async function PUT(
           .update(stepFunctionExecutions)
           .set({
             status: 'ABORTED',
-            endedAt: new Date(),
+            completedAt: new Date(),
             updatedAt: new Date()
           })
-          .where(eq(stepFunctionExecutions.id, executionId));
+          .where(eq(stepFunctionExecutions.executionArn, executionArn));
 
         return NextResponse.json({
           success: true,

@@ -3,7 +3,7 @@ import { SFNClient, StartExecutionCommand, ListStateMachinesCommand } from '@aws
 import { S3Client, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '@/lib/db';
-import { stepFunctionExecutions } from '@/lib/db/schema';
+import { stepFunctionExecutions, documents } from '@/lib/db/schema';
 
 // Initialize AWS services
 const stepFunctions = new SFNClient({
@@ -108,16 +108,30 @@ export async function POST(request: NextRequest) {
 
     // Store execution record in database
     try {
+      // First create a document record
+      await db.insert(documents).values({
+        id: documentId,
+        documentType: 'inci' as any, // Cast to avoid type issues with USER-DEFINED type
+        originalFilename: fileName,
+        filePath: fileKey,
+        fileSizeBytes: BigInt(fileSize),
+        mimeType: mimeType,
+        metadata: body.metadata || {},
+        processingStatus: 'pending' as any,
+        uploadedBy: null // No user authentication in this flow
+      });
+
+      // Then create the step function execution record
       await db.insert(stepFunctionExecutions).values({
-        id: executionId,
-        executionArn: executionResult.executionArn,
+        executionArn: executionResult.executionArn!,
         documentId,
-        fileName,
-        fileKey,
+        userId: '525baa17-e509-4f4f-a6e8-51fb8d570489', // Use existing user ID
         status: 'RUNNING',
-        input: stepFunctionsInput,
-        startedAt: new Date(),
-        uploadedBy: body.uploadedBy || null
+        s3Bucket: bucketName,
+        s3Key: fileKey,
+        inputData: stepFunctionsInput,
+        totalSteps: 7,
+        completedSteps: 0
       });
     } catch (dbError) {
       console.error('Failed to store execution record:', dbError);
