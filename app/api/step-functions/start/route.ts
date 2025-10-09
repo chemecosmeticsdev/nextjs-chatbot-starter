@@ -151,6 +151,7 @@ export async function POST(request: NextRequest) {
 }
 
 // GET endpoint to check if Step Functions is properly configured
+// Force cache refresh - environment variables should be available after job 54 & 55
 export async function GET() {
   try {
     // Check if required environment variables are set
