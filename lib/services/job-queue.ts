@@ -77,41 +77,43 @@ interface QueueConfig {
   dlqUrl?: string; // Dead letter queue
 }
 
-// Default queue configurations
-const QueueConfigs: Record<JobPriority, QueueConfig> = {
-  [JobPriority.CRITICAL]: {
-    queueUrl: process.env.SQS_CRITICAL_QUEUE_URL!,
-    region: process.env.DEFAULT_REGION || 'ap-southeast-1',
-    visibilityTimeout: 30,
-    messageRetentionPeriod: 1209600, // 14 days
-    maxReceiveCount: 3,
-    dlqUrl: process.env.SQS_CRITICAL_DLQ_URL
-  },
-  [JobPriority.HIGH]: {
-    queueUrl: process.env.SQS_HIGH_QUEUE_URL!,
-    region: process.env.DEFAULT_REGION || 'ap-southeast-1',
-    visibilityTimeout: 60,
-    messageRetentionPeriod: 1209600,
-    maxReceiveCount: 3,
-    dlqUrl: process.env.SQS_HIGH_DLQ_URL
-  },
-  [JobPriority.NORMAL]: {
-    queueUrl: process.env.SQS_NORMAL_QUEUE_URL!,
-    region: process.env.DEFAULT_REGION || 'ap-southeast-1',
-    visibilityTimeout: 300, // 5 minutes
-    messageRetentionPeriod: 1209600,
-    maxReceiveCount: 5,
-    dlqUrl: process.env.SQS_NORMAL_DLQ_URL
-  },
-  [JobPriority.LOW]: {
-    queueUrl: process.env.SQS_LOW_QUEUE_URL!,
-    region: process.env.DEFAULT_REGION || 'ap-southeast-1',
-    visibilityTimeout: 900, // 15 minutes
-    messageRetentionPeriod: 1209600,
-    maxReceiveCount: 10,
-    dlqUrl: process.env.SQS_LOW_DLQ_URL
-  }
-};
+// Queue configuration factory - loads at runtime to ensure env vars are available
+function getQueueConfigs(): Record<JobPriority, QueueConfig> {
+  return {
+    [JobPriority.CRITICAL]: {
+      queueUrl: process.env.SQS_CRITICAL_QUEUE_URL!,
+      region: process.env.DEFAULT_REGION || 'ap-southeast-1',
+      visibilityTimeout: 30,
+      messageRetentionPeriod: 1209600, // 14 days
+      maxReceiveCount: 3,
+      dlqUrl: process.env.SQS_CRITICAL_DLQ_URL
+    },
+    [JobPriority.HIGH]: {
+      queueUrl: process.env.SQS_HIGH_QUEUE_URL!,
+      region: process.env.DEFAULT_REGION || 'ap-southeast-1',
+      visibilityTimeout: 60,
+      messageRetentionPeriod: 1209600,
+      maxReceiveCount: 3,
+      dlqUrl: process.env.SQS_HIGH_DLQ_URL
+    },
+    [JobPriority.NORMAL]: {
+      queueUrl: process.env.SQS_NORMAL_QUEUE_URL!,
+      region: process.env.DEFAULT_REGION || 'ap-southeast-1',
+      visibilityTimeout: 300, // 5 minutes
+      messageRetentionPeriod: 1209600,
+      maxReceiveCount: 5,
+      dlqUrl: process.env.SQS_NORMAL_DLQ_URL
+    },
+    [JobPriority.LOW]: {
+      queueUrl: process.env.SQS_LOW_QUEUE_URL!,
+      region: process.env.DEFAULT_REGION || 'ap-southeast-1',
+      visibilityTimeout: 900, // 15 minutes
+      messageRetentionPeriod: 1209600,
+      maxReceiveCount: 10,
+      dlqUrl: process.env.SQS_LOW_DLQ_URL
+    }
+  };
+}
 
 /**
  * Job Queue Service using AWS SQS
@@ -158,7 +160,7 @@ export class JobQueueService {
   }
 
   private initializeSQSClients(): void {
-    for (const [priority, config] of Object.entries(QueueConfigs)) {
+    for (const [priority, config] of Object.entries(getQueueConfigs())) {
       const client = new SQSClient({
         region: config.region,
         credentials: {
@@ -197,7 +199,7 @@ export class JobQueueService {
         }
       };
 
-      const config = QueueConfigs[job.priority];
+      const config = getQueueConfigs()[job.priority];
       const client = this.sqsClients.get(job.priority)!;
 
       const command = new SendMessageCommand({
@@ -538,7 +540,7 @@ export class JobQueueService {
     const startTime = Date.now();
 
     try {
-      const config = QueueConfigs[priority];
+      const config = getQueueConfigs()[priority];
       const client = this.sqsClients.get(priority);
 
       // Enhanced validation and logging
@@ -616,8 +618,8 @@ export class JobQueueService {
         errorMessage: error?.message,
         statusCode: error?.$metadata?.httpStatusCode,
         requestId: error?.$metadata?.requestId,
-        region: QueueConfigs[priority]?.region,
-        queueUrl: QueueConfigs[priority]?.queueUrl,
+        region: getQueueConfigs()[priority]?.region,
+        queueUrl: getQueueConfigs()[priority]?.queueUrl,
         timestamp: new Date().toISOString()
       };
 
@@ -625,7 +627,7 @@ export class JobQueueService {
 
       // Log specific AWS SQS error types
       if (error?.name === 'QueueDoesNotExist') {
-        console.error(`[SQS] Queue does not exist - check queue URL configuration: ${QueueConfigs[priority]?.queueUrl}`);
+        console.error(`[SQS] Queue does not exist - check queue URL configuration: ${getQueueConfigs()[priority]?.queueUrl}`);
       } else if (error?.name === 'AccessDenied' || error?.Code === 'AccessDenied') {
         console.error(`[SQS] Access denied - check IAM permissions for SQS operations`);
       } else if (error?.name === 'InvalidParameterValue') {
@@ -648,7 +650,7 @@ export class JobQueueService {
    */
   async completeJob(receiptHandle: string, priority: JobPriority): Promise<void> {
     try {
-      const config = QueueConfigs[priority];
+      const config = getQueueConfigs()[priority];
       const client = this.sqsClients.get(priority)!;
 
       const command = new DeleteMessageCommand({
@@ -764,7 +766,7 @@ export class JobQueueService {
       // Phase 2: Test actual SQS connectivity for each queue
       const connectivityTests = [];
       for (const [priority, client] of this.sqsClients.entries()) {
-        const config = QueueConfigs[priority];
+        const config = getQueueConfigs()[priority];
         if (!config?.queueUrl) {
           throw new Error(`Queue URL not configured for ${priority} priority`);
         }
