@@ -21,7 +21,7 @@ async function getMistralOCRService() {
 import { DocumentChunker } from './document-chunker';
 import { vectorStorage } from './vector-storage';
 import { titanEmbedder } from '../embeddings/titan-embedder';
-import { db } from '@/lib/db';
+import { db, optimizedQuery, getConnectionHealth } from '@/lib/db';
 import { documents, documentChunks } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
@@ -165,7 +165,10 @@ export class EnhancedDocumentProcessor {
 
         try {
           // Attempt to recover userId from document record
-          const doc = await db.select().from(documents).where(eq(documents.id, documentId)).limit(1);
+          const doc = await optimizedQuery(
+            () => db.select().from(documents).where(eq(documents.id, documentId)).limit(1),
+            `recover-userId-for-document-${documentId}`
+          );
           if (doc.length > 0 && doc[0].uploadedBy) {
             effectiveUserId = doc[0].uploadedBy;
             console.log(`[DocumentDownload] Recovered userId: ${effectiveUserId} for document ${documentId}`);
@@ -1609,7 +1612,10 @@ export class EnhancedDocumentProcessor {
 
   private async queueTextExtraction(documentId: string): Promise<string> {
     // Get document details first
-    const doc = await db.select().from(documents).where(eq(documents.id, documentId)).limit(1);
+    const doc = await optimizedQuery(
+      () => db.select().from(documents).where(eq(documents.id, documentId)).limit(1),
+      `queue-text-extraction-document-${documentId}`
+    );
     if (doc.length === 0) throw new Error(`Document ${documentId} not found`);
 
     // LEGACY PATH PROTECTION: Correct any legacy paths before queueing
@@ -1654,7 +1660,10 @@ export class EnhancedDocumentProcessor {
     const retryDelay = 2000; // 2 seconds
 
     // Get document details
-    const doc = await db.select().from(documents).where(eq(documents.id, documentId)).limit(1);
+    const doc = await optimizedQuery(
+      () => db.select().from(documents).where(eq(documents.id, documentId)).limit(1),
+      `queue-metadata-enhancement-document-${documentId}`
+    );
     if (doc.length === 0) throw new Error(`Document ${documentId} not found`);
 
     const document = doc[0];
@@ -1722,7 +1731,10 @@ export class EnhancedDocumentProcessor {
 
   private async queueDocumentChunking(documentId: string): Promise<string> {
     // Get document details
-    const doc = await db.select().from(documents).where(eq(documents.id, documentId)).limit(1);
+    const doc = await optimizedQuery(
+      () => db.select().from(documents).where(eq(documents.id, documentId)).limit(1),
+      `queue-document-chunking-document-${documentId}`
+    );
     if (doc.length === 0) throw new Error(`Document ${documentId} not found`);
 
     return jobQueue.addJob({
@@ -1743,7 +1755,10 @@ export class EnhancedDocumentProcessor {
 
     if (!chunkData) {
       // Get chunks from chunking result or generate basic chunks
-      const doc = await db.select().from(documents).where(eq(documents.id, documentId)).limit(1);
+      const doc = await optimizedQuery(
+        () => db.select().from(documents).where(eq(documents.id, documentId)).limit(1),
+        `queue-embedding-generation-document-${documentId}`
+      );
       if (doc.length === 0) throw new Error(`Document ${documentId} not found`);
 
       // Basic chunking if no chunks provided

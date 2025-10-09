@@ -17,7 +17,7 @@ async function getEnhancedDocumentProcessor() {
 }
 
 import { vectorStorage } from './vector-storage';
-import { db } from '@/lib/db';
+import { db, getConnectionHealth, resetConnectionMetrics } from '@/lib/db';
 import { chatbotMessages, chatbotConversations, chatbotInstances, documents, activityLogs } from '@/lib/db/schema';
 import { eq, and, count, avg, sql, desc, gte } from 'drizzle-orm';
 
@@ -1149,8 +1149,16 @@ export class JobQueueManager {
       heapTotal: number;
       utilization: number;
     };
+    databaseHealth: {
+      totalQueries: number;
+      failedQueries: number;
+      successRate: number;
+      lastActivity: string;
+      timeSinceLastActivity: number;
+    };
   } {
     const memUsage = process.memoryUsage();
+    const dbHealth = getConnectionHealth();
 
     return {
       running: this.isRunning,
@@ -1161,7 +1169,8 @@ export class JobQueueManager {
         heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024), // MB
         heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024), // MB
         utilization: Math.round((memUsage.heapUsed / memUsage.heapTotal) * 100) / 100
-      }
+      },
+      databaseHealth: dbHealth
     };
   }
 }
