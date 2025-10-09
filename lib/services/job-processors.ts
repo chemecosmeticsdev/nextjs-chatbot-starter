@@ -795,9 +795,9 @@ export class JobQueueManager {
   // Memory management properties
   private memoryUsageInterval?: NodeJS.Timeout;
   private lastMemoryCheck = 0;
-  private maxConcurrentJobs = 5;
+  private maxConcurrentJobs = 2; // Reduced from 5 to 2 for better memory management
   private currentlyProcessing = 0;
-  private memoryThreshold = process.env.NODE_ENV === 'development' ? 0.95 : 0.85; // 95% in dev, 85% in production
+  private memoryThreshold = process.env.NODE_ENV === 'development' ? 0.70 : 0.70; // 70% in both dev and production for stability
   private memoryWarned = false;
 
   constructor() {
@@ -906,12 +906,12 @@ export class JobQueueManager {
     this.isRunning = true;
     console.log('Starting job queue manager...');
 
-    // Start processors for each priority level with different intervals
+    // Start processors for each priority level with optimized intervals for memory management
     const intervals = {
-      [JobPriority.CRITICAL]: 1000,  // 1 second
-      [JobPriority.HIGH]: 2000,     // 2 seconds
-      [JobPriority.NORMAL]: 5000,   // 5 seconds
-      [JobPriority.LOW]: 15000      // 15 seconds
+      [JobPriority.CRITICAL]: 2000,  // 2 seconds (reduced frequency)
+      [JobPriority.HIGH]: 5000,     // 5 seconds (reduced frequency)
+      [JobPriority.NORMAL]: 10000,  // 10 seconds (reduced frequency)
+      [JobPriority.LOW]: 30000      // 30 seconds (reduced frequency)
     };
 
     for (const [priority, interval] of Object.entries(intervals)) {
@@ -930,16 +930,16 @@ export class JobQueueManager {
       this.processIntervals.set(priority as JobPriority, timer);
     }
 
-    // Start memory monitoring
+    // Start memory monitoring with more aggressive cleanup
     this.memoryUsageInterval = setInterval(() => {
       this.checkMemoryUsage();
 
-      // Perform cleanup every 5 minutes
+      // Perform cleanup every 2 minutes (more frequent)
       const now = Date.now();
-      if (now - this.lastMemoryCheck > 300000) { // 5 minutes
+      if (now - this.lastMemoryCheck > 120000) { // 2 minutes
         this.performMemoryCleanup();
       }
-    }, 60000); // Check every minute
+    }, 30000); // Check every 30 seconds (more frequent monitoring)
 
     console.log('Job queue manager started');
   }
