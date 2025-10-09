@@ -134,7 +134,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run npm audit
-        run: npm audit --audit-level=moderate
+        run: npm audit --audit-level=high
 
       - name: Setup Node.js for dependency check
         uses: actions/setup-node@v4

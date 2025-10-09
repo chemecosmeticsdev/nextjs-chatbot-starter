@@ -219,8 +219,8 @@ describe('Database Performance Tests', () => {
 
         // Query specific setting (should use primary key index)
         const startTime = performance.now()
-        const db = testDb.getDatabase()
-        const specificSetting = await db.select()
+        const database = testDb.getDatabase()
+        const specificSetting = await database.select()
           .from(schema.systemSettings)
           .where(eq(schema.systemSettings.key, 'mistral_ocr_api_key'))
         const endTime = performance.now()
@@ -253,10 +253,10 @@ describe('Database Performance Tests', () => {
         })
 
         const startTime = performance.now()
-        const db = testDb.getDatabase()
+        const database = testDb.getDatabase()
 
         // Query using JSONB operators (if supported)
-        const jsonQuery = await db.select()
+        const jsonQuery = await database.select()
           .from(schema.systemSettings)
           .where(
             sql`${schema.systemSettings.value}->>'level1' IS NOT NULL`
@@ -316,8 +316,8 @@ describe('Database Performance Tests', () => {
         const startTime = performance.now()
 
         // Simulate a transaction with multiple operations
-        const db = testDb.getDatabase()
-        await db.transaction(async (tx) => {
+        const database = testDb.getDatabase()
+        await database.transaction(async (tx) => {
           for (let i = 0; i < transactionSize; i++) {
             await tx.insert(schema.systemSettings).values({
               key: `transaction_test_${i}`,
