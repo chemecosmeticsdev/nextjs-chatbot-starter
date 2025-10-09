@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { SFNClient, StartExecutionCommand } from '@aws-sdk/client-sfn';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '@/lib/db';
-import { stepFunctionExecutions, processingSteps } from '@/lib/db/schema';
+import { stepFunctionExecutions, pipelineActivityLogs } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
 // Initialize AWS Step Functions
@@ -81,17 +81,17 @@ export async function POST(request: NextRequest) {
       // Get the last failed step to determine where to resume
       const failedSteps = await db
         .select()
-        .from(processingSteps)
-        .where(eq(processingSteps.executionArn, original.executionArn))
-        .orderBy(processingSteps.stepOrder);
+        .from(pipelineActivityLogs)
+        .where(eq(pipelineActivityLogs.executionId, original.id))
+        .orderBy(pipelineActivityLogs.timestamp);
 
-      const lastFailedStep = failedSteps.find(step => step.status === 'FAILED');
+      const lastFailedStep = failedSteps.find(step => step.logLevel === 'ERROR');
 
       if (lastFailedStep) {
-        retryInput.resumeFromStep = lastFailedStep.stepName;
+        retryInput.resumeFromStep = lastFailedStep.stage;
         retryInput.skipSteps = skipSteps;
 
-        console.log(`Retry from failure - resuming from step: ${lastFailedStep.stepName}`);
+        console.log(`Retry from failure - resuming from step: ${lastFailedStep.stage}`);
       }
     }
 

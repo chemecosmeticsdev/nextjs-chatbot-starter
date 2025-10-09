@@ -18,8 +18,9 @@ frontend:
         - npm run build
         # For standalone mode, copy static files and standalone output
         - cp -r .next/standalone/. ./
-        - cp -r .next/static ./.next/
-        - cp -r public ./
+        - mkdir -p ./.next/static
+        - cp -r .next/static/* ./.next/static/ 2>/dev/null || true
+        - cp -r public ./ 2>/dev/null || true
         # Clean up build artifacts to reduce memory footprint
         - find .next -name "*.map" -type f -delete || true
         # Memory cleanup after build
