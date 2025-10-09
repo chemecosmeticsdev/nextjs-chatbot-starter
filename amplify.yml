@@ -3,10 +3,23 @@ frontend:
   phases:
     preBuild:
       commands:
-        - npm install
+        # Memory optimization for npm install
+        - export NODE_OPTIONS="--max-old-space-size=3072"
+        - npm install --prefer-offline --no-audit --no-fund
+        # Clean up any potential memory leaks from previous builds
+        - npm cache clean --force
     build:
       commands:
+        # Optimize Node.js memory for build process
+        - export NODE_OPTIONS="--max-old-space-size=3072 --optimize-for-size"
+        # Enable garbage collection optimizations
+        - export NODE_ENV=production
+        # Reduce memory pressure during build
         - npm run build
+        # Clean up build artifacts to reduce memory footprint
+        - find .next -name "*.map" -type f -delete || true
+        # Memory cleanup after build
+        - npm cache clean --force || true
   artifacts:
     baseDirectory: .next
     files:
@@ -15,3 +28,12 @@ frontend:
     paths:
       - node_modules/**/*
       - .next/cache/**/*
+  # Memory and performance optimizations
+  environment:
+    variables:
+      # Optimize Node.js runtime memory
+      NODE_OPTIONS: "--max-old-space-size=3072 --optimize-for-size"
+      # Reduce build memory pressure
+      NEXT_TELEMETRY_DISABLED: "1"
+      # Enable production optimizations
+      NODE_ENV: "production"

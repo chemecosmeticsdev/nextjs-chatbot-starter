@@ -11,6 +11,20 @@ const nextConfig = {
     instrumentationHook: true,
     // Memory optimizations for development
     optimizeCss: process.env.NODE_ENV === 'development' ? false : true,
+    // Enable memory-efficient compilation
+    optimizeServerReact: true,
+    // Reduce memory usage during builds
+    turbo: false, // Disable Turbopack to avoid memory spikes
+    // Memory-efficient middleware
+    instrumentationHook: true,
+  },
+  // Production performance optimizations
+  productionBrowserSourceMaps: false, // Disable source maps to save memory
+  compress: true, // Enable gzip compression
+  // Memory-efficient asset handling
+  generateBuildId: async () => {
+    // Use timestamp instead of git hash to reduce memory
+    return `build-${Date.now()}`;
   },
   // ESLint configuration for AWS Amplify builds
   eslint: {
@@ -82,6 +96,48 @@ const nextConfig = {
         // Enable tree shaking in production only
         usedExports: true,
         sideEffects: false,
+        // Memory-efficient chunk splitting
+        splitChunks: {
+          chunks: 'all',
+          minSize: 30000,
+          maxSize: 250000,
+          cacheGroups: {
+            framework: {
+              chunks: 'all',
+              name: 'framework',
+              test: /(?<!node_modules.*)[\\/]node_modules[\\/](react|react-dom|scheduler|prop-types|use-subscription)[\\/]/,
+              priority: 40,
+              enforce: true,
+            },
+            lib: {
+              test: /[\\/]node_modules[\\/]/,
+              name: 'lib',
+              priority: 30,
+              chunks: 'all',
+              maxSize: 200000,
+            },
+            commons: {
+              name: 'commons',
+              minChunks: 2,
+              priority: 20,
+              chunks: 'all',
+              maxSize: 150000,
+            },
+          },
+        },
+        // Minimize memory usage during optimization
+        minimize: true,
+        // Reduce memory footprint
+        removeAvailableModules: true,
+        removeEmptyChunks: true,
+        mergeDuplicateChunks: true,
+      };
+
+      // Memory-efficient performance hints
+      config.performance = {
+        hints: false, // Disable to reduce memory usage
+        maxAssetSize: 500000,
+        maxEntrypointSize: 500000,
       };
     }
 
