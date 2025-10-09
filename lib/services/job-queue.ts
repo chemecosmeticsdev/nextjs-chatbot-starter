@@ -490,7 +490,7 @@ export class JobQueueService {
   }>> {
     const stats: any = {};
 
-    for (const [priority, config] of Object.entries(QueueConfigs)) {
+    for (const [priority, config] of Object.entries(getQueueConfigs())) {
       try {
         const client = this.sqsClients.get(priority as JobPriority)!;
 
@@ -795,7 +795,7 @@ export class JobQueueService {
         error: error?.message,
         timestamp: new Date().toISOString(),
         clientsConfigured: this.sqsClients.size,
-        expectedQueues: Object.keys(QueueConfigs).length
+        expectedQueues: Object.keys(getQueueConfigs()).length
       });
       this.markUnhealthy();
     }
@@ -966,4 +966,4 @@ export const JobFactory = {
 
 // Export types for job processors
 export type { Job, QueueConfig };
-export { QueueConfigs };
+export { getQueueConfigs };
