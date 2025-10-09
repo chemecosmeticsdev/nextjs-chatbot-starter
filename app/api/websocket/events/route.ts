@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { stepFunctionExecutions, processingSteps } from '@/lib/db/schema';
+import { stepFunctionExecutions, pipelineActivityLogs } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
 // Store active connections
@@ -180,15 +180,15 @@ async function getExecutionStatus(executionId: string) {
     // Get processing steps
     const steps = await db
       .select()
-      .from(processingSteps)
-      .where(eq(processingSteps.executionArn, execution[0].executionArn))
-      .orderBy(processingSteps.stepOrder);
+      .from(pipelineActivityLogs)
+      .where(eq(pipelineActivityLogs.executionId, execution[0].id))
+      .orderBy(pipelineActivityLogs.timestamp);
 
     // Calculate progress
     const totalSteps = 7;
-    const completedSteps = steps.filter(step => step.status === 'SUCCEEDED').length;
-    const runningSteps = steps.filter(step => step.status === 'RUNNING').length;
-    const failedSteps = steps.filter(step => step.status === 'FAILED').length;
+    const completedSteps = steps.filter(step => step.logLevel === 'INFO' && step.message?.includes('completed')).length;
+    const runningSteps = steps.filter(step => step.logLevel === 'INFO' && step.message?.includes('started')).length;
+    const failedSteps = steps.filter(step => step.logLevel === 'ERROR').length;
 
     return {
       execution: {
@@ -207,11 +207,11 @@ async function getExecutionStatus(executionId: string) {
         failed: failedSteps
       },
       steps: steps.map(step => ({
-        name: step.stepName,
-        status: step.status,
-        order: step.stepOrder,
-        startedAt: step.startedAt,
-        completedAt: step.completedAt
+        name: step.stage,
+        message: step.message,
+        logLevel: step.logLevel,
+        timestamp: step.timestamp,
+        details: step.details
       }))
     };
 

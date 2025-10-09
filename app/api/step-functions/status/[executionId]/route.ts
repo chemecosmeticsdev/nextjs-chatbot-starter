@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SFNClient, DescribeExecutionCommand, StopExecutionCommand } from '@aws-sdk/client-sfn';
 import { db } from '@/lib/db';
-import { stepFunctionExecutions, processingSteps } from '@/lib/db/schema';
+import { stepFunctionExecutions, pipelineActivityLogs } from '@/lib/db/schema';
 import { eq, desc } from 'drizzle-orm';
 
 // Initialize AWS Step Functions
@@ -83,15 +83,15 @@ export async function GET(
     // Get processing steps from database
     const steps = await db
       .select()
-      .from(processingSteps)
-      .where(eq(processingSteps.executionArn, executionArn))
-      .orderBy(desc(processingSteps.stepOrder));
+      .from(pipelineActivityLogs)
+      .where(eq(pipelineActivityLogs.executionId, execution.id))
+      .orderBy(desc(pipelineActivityLogs.timestamp));
 
     // Calculate progress
     const totalSteps = 7; // FileValidation, OCR, Chunking, Embedding, DatabaseInsertion, MetadataEnhancement, Completion
-    const completedSteps = steps.filter(step => step.status === 'SUCCEEDED').length;
-    const failedSteps = steps.filter(step => step.status === 'FAILED').length;
-    const runningSteps = steps.filter(step => step.status === 'RUNNING').length;
+    const completedSteps = steps.filter(step => step.logLevel === 'INFO' && step.message?.includes('completed')).length;
+    const failedSteps = steps.filter(step => step.logLevel === 'ERROR').length;
+    const runningSteps = steps.filter(step => step.logLevel === 'INFO' && step.message?.includes('started')).length;
 
     const progress = {
       percentage: Math.round((completedSteps / totalSteps) * 100),
@@ -109,12 +109,12 @@ export async function GET(
 
     // Get current step info
     let currentStep = null;
-    const runningStep = steps.find(step => step.status === 'RUNNING');
+    const runningStep = steps.find(step => step.logLevel === 'INFO' && step.message?.includes('started'));
     if (runningStep) {
       currentStep = {
-        name: runningStep.stepName,
-        status: runningStep.status,
-        startedAt: runningStep.startedAt
+        name: runningStep.stage,
+        status: 'RUNNING',
+        startedAt: runningStep.timestamp
       };
     } else if (overallStatus === 'RUNNING' && completedSteps < totalSteps) {
       // Infer next step based on completed steps
@@ -153,13 +153,12 @@ export async function GET(
         error: execution.errorDetails || stepFunctionsStatus?.error || null
       },
       steps: steps.map(step => ({
-        name: step.stepName,
-        order: step.stepOrder,
-        status: step.status,
-        startedAt: step.startedAt,
-        completedAt: step.completedAt,
-        errorDetails: step.errorDetails,
-        outputData: step.outputData
+        name: step.stage,
+        message: step.message,
+        logLevel: step.logLevel,
+        timestamp: step.timestamp,
+        details: step.details,
+        sourceFunction: step.sourceFunction
       })),
       stepFunctionsStatus
     });

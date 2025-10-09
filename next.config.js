@@ -13,10 +13,6 @@ const nextConfig = {
     optimizeCss: process.env.NODE_ENV === 'development' ? false : true,
     // Enable memory-efficient compilation
     optimizeServerReact: true,
-    // Reduce memory usage during builds
-    turbo: false, // Disable Turbopack to avoid memory spikes
-    // Memory-efficient middleware
-    instrumentationHook: true,
   },
   // Production performance optimizations
   productionBrowserSourceMaps: false, // Disable source maps to save memory
