@@ -7,6 +7,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { jobQueue } from '@/lib/services/job-queue';
 
+// Disable caching for health endpoint
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 interface SQSHealthResponse {
   status: 'healthy' | 'unhealthy' | 'degraded';
   timestamp: string;
@@ -172,12 +176,20 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const httpStatus = healthData.status === 'healthy' ? 200 :
                       healthData.status === 'degraded' ? 207 : 503;
 
-    return NextResponse.json(healthData, { status: httpStatus });
+    const response = NextResponse.json(healthData, { status: httpStatus });
+
+    // Add cache prevention headers
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+    response.headers.set('Surrogate-Control', 'no-store');
+
+    return response;
 
   } catch (error: any) {
     console.error('[API] SQS health endpoint error:', error);
 
-    return NextResponse.json({
+    const errorResponse = NextResponse.json({
       status: 'unhealthy',
       timestamp: new Date().toISOString(),
       error: error?.message || 'Health check failed',
@@ -189,6 +201,14 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         queueUrls: {}
       }
     }, { status: 503 });
+
+    // Add cache prevention headers to error response too
+    errorResponse.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    errorResponse.headers.set('Pragma', 'no-cache');
+    errorResponse.headers.set('Expires', '0');
+    errorResponse.headers.set('Surrogate-Control', 'no-store');
+
+    return errorResponse;
   }
 }
 

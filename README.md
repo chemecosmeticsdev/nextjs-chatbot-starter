@@ -1,6 +1,13 @@
 # Chatbot v1
 
-A Next.js chatbot application with AWS Bedrock integration and comprehensive testing suite.
+A Next.js chatbot application with AWS Bedrock integration, SQS job processing, and comprehensive testing suite.
+
+## 🚀 Production Features
+
+- **Standalone Server Mode**: Full server-side functionality with persistent background processing
+- **SQS Job Processing**: Real-time document processing with job queues and error handling
+- **Health Monitoring**: `/api/health/sqs` endpoint for real-time queue status monitoring
+- **Enhanced Diagnostics**: Comprehensive error logging and connectivity validation
 
 ## Testing
 
