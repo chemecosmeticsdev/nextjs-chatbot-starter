@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
 
     // Start Step Functions execution
     const stateMachineArn = process.env.STEPFUNCTIONS_STATE_MACHINE_ARN ||
-      `arn:aws:states:${process.env.DEFAULT_REGION}:${process.env.AWS_ACCOUNT_ID}:stateMachine:DocumentProcessingWorkflow`;
+      `arn:aws:states:${process.env.DEFAULT_REGION}:${process.env.ACCOUNT_ID}:stateMachine:DocumentProcessingWorkflow`;
 
     const executionParams = {
       stateMachineArn,
