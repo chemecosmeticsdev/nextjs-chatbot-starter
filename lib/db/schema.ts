@@ -1223,5 +1223,118 @@ export type NewDeveloperPortalUser = typeof developerPortalUsers.$inferInsert;
 export type WidgetAnalyticsEvent = typeof widgetAnalyticsEvents.$inferSelect;
 export type NewWidgetAnalyticsEvent = typeof widgetAnalyticsEvents.$inferInsert;
 
+// =============================================================================
+// STEP FUNCTIONS TRACKING TABLES
+// =============================================================================
+
+// Step Functions execution status enum
+export const stepFunctionExecutionStatusEnum = pgEnum('step_function_execution_status', [
+  'RUNNING', 'SUCCEEDED', 'FAILED', 'TIMED_OUT', 'ABORTED'
+]);
+
+// Document processing stage enum
+export const documentProcessingStageEnum = pgEnum('document_processing_stage', [
+  'UPLOADED', 'OCR_PROCESSING', 'METADATA_ENHANCEMENT', 'CHUNKING',
+  'VECTOR_EMBEDDING', 'DATABASE_INSERTION', 'COMPLETED', 'FAILED'
+]);
+
+// Log level enum
+export const logLevelEnum = pgEnum('log_level', ['DEBUG', 'INFO', 'WARN', 'ERROR', 'FATAL']);
+
+// Step Functions Executions table
+export const stepFunctionExecutions = pgTable('step_functions_executions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  executionArn: varchar('execution_arn', { length: 512 }).unique().notNull(),
+  executionName: varchar('execution_name', { length: 255 }).notNull(),
+  stateMachineArn: varchar('state_machine_arn', { length: 512 }).notNull(),
+  status: stepFunctionExecutionStatusEnum('status').notNull(),
+  startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+  endedAt: timestamp('ended_at', { withTimezone: true }),
+  input: jsonb('input'),
+  output: jsonb('output'),
+  error: jsonb('error'),
+  // Document processing specific fields
+  documentId: uuid('document_id'),
+  fileName: varchar('file_name', { length: 255 }),
+  fileKey: varchar('file_key', { length: 1024 }),
+  uploadedBy: varchar('uploaded_by', { length: 255 }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  statusIndex: index('idx_step_functions_executions_status').on(table.status),
+  startedAtIndex: index('idx_step_functions_executions_started_at').on(table.startedAt),
+  executionArnIndex: index('idx_step_functions_executions_execution_arn').on(table.executionArn),
+  documentIdIndex: index('idx_step_functions_executions_document_id').on(table.documentId),
+  fileKeyIndex: index('idx_step_functions_executions_file_key').on(table.fileKey),
+}));
+
+// Document Processing Status table
+export const documentProcessingStatus = pgTable('document_processing_status', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  executionId: uuid('execution_id').references(() => stepFunctionExecutions.id, { onDelete: 'cascade' }),
+  documentKey: varchar('document_key', { length: 1024 }).notNull(),
+  documentName: varchar('document_name', { length: 512 }).notNull(),
+  fileSize: varchar('file_size', { length: 50 }), // bigint as varchar
+  mimeType: varchar('mime_type', { length: 100 }),
+  processingStage: documentProcessingStageEnum('processing_stage').notNull(),
+  stageStartTime: timestamp('stage_start_time', { withTimezone: true }),
+  stageEndTime: timestamp('stage_end_time', { withTimezone: true }),
+  stageDurationMs: integer('stage_duration_ms'),
+  stageOutput: jsonb('stage_output'),
+  errorMessage: text('error_message'),
+  retryCount: integer('retry_count').default(0),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  executionIdIndex: index('idx_document_processing_status_execution_id').on(table.executionId),
+  stageIndex: index('idx_document_processing_status_stage').on(table.processingStage),
+  documentKeyIndex: index('idx_document_processing_status_document_key').on(table.documentKey),
+}));
+
+// Pipeline Activity Logs table
+export const pipelineActivityLogs = pgTable('pipeline_activity_logs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  executionId: uuid('execution_id').references(() => stepFunctionExecutions.id, { onDelete: 'cascade' }),
+  documentStatusId: uuid('document_status_id').references(() => documentProcessingStatus.id, { onDelete: 'cascade' }),
+  logLevel: logLevelEnum('log_level').notNull(),
+  stage: varchar('stage', { length: 50 }).notNull(),
+  message: text('message').notNull(),
+  details: jsonb('details'),
+  timestamp: timestamp('timestamp', { withTimezone: true }).notNull().defaultNow(),
+  sourceFunction: varchar('source_function', { length: 100 }),
+}, (table) => ({
+  executionIdIndex: index('idx_pipeline_activity_logs_execution_id').on(table.executionId),
+  timestampIndex: index('idx_pipeline_activity_logs_timestamp').on(table.timestamp),
+  logLevelIndex: index('idx_pipeline_activity_logs_log_level').on(table.logLevel),
+}));
+
+// Pipeline Metrics table
+export const pipelineMetrics = pgTable('pipeline_metrics', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  executionId: uuid('execution_id').references(() => stepFunctionExecutions.id, { onDelete: 'cascade' }),
+  metricName: varchar('metric_name', { length: 100 }).notNull(),
+  metricValue: varchar('metric_value', { length: 20 }).notNull(), // Using varchar for decimal
+  metricUnit: varchar('metric_unit', { length: 20 }).notNull(),
+  stage: varchar('stage', { length: 50 }).notNull(),
+  timestamp: timestamp('timestamp', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  executionIdIndex: index('idx_pipeline_metrics_execution_id').on(table.executionId),
+  metricNameIndex: index('idx_pipeline_metrics_metric_name').on(table.metricName),
+  timestampIndex: index('idx_pipeline_metrics_timestamp').on(table.timestamp),
+}));
+
+// TypeScript types for Step Functions tables
+export type StepFunctionsExecution = typeof stepFunctionExecutions.$inferSelect;
+export type NewStepFunctionsExecution = typeof stepFunctionExecutions.$inferInsert;
+
+export type DocumentProcessingStatus = typeof documentProcessingStatus.$inferSelect;
+export type NewDocumentProcessingStatus = typeof documentProcessingStatus.$inferInsert;
+
+export type PipelineActivityLog = typeof pipelineActivityLogs.$inferSelect;
+export type NewPipelineActivityLog = typeof pipelineActivityLogs.$inferInsert;
+
+export type PipelineMetric = typeof pipelineMetrics.$inferSelect;
+export type NewPipelineMetric = typeof pipelineMetrics.$inferInsert;
+
 // Compatibility alias for legacy imports
 export const chatbots = chatbotInstances;

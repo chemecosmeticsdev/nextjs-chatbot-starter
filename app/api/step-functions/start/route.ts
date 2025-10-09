@@ -72,6 +72,7 @@ export async function POST(request: NextRequest) {
       documentId,
       fileName,
       fileKey,
+      s3Key: fileKey, // State machine expects s3Key parameter
       fileSize,
       mimeType,
       s3Bucket: bucketName,
@@ -88,7 +89,7 @@ export async function POST(request: NextRequest) {
 
     // Start Step Functions execution
     const stateMachineArn = process.env.STEPFUNCTIONS_STATE_MACHINE_ARN ||
-      `arn:aws:states:${process.env.DEFAULT_REGION}:${process.env.ACCOUNT_ID}:stateMachine:DocumentProcessingWorkflow`;
+      `arn:aws:states:${process.env.DEFAULT_REGION}:${process.env.ACCOUNT_ID}:stateMachine:DocumentProcessingPipeline`;
 
     const executionParams = {
       stateMachineArn,
