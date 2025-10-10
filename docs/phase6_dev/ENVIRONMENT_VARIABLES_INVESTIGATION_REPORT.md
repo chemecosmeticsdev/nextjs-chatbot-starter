@@ -234,8 +234,8 @@ NEXT_PUBLIC_WS_URL=wss://your-websocket-endpoint.com
 #### Server-Side Variables (API Routes Access)
 ```bash
 # AWS Services Authentication
-BAWS_ACCESS_KEY_ID=[REDACTED]
-BAWS_SECRET_ACCESS_KEY=[REDACTED]
+BAWS_ACCESS_KEY_ID=AKIA***[REDACTED]***
+BAWS_SECRET_ACCESS_KEY=***[REDACTED]***
 DEFAULT_REGION=ap-southeast-1
 BEDROCK_REGION=us-east-1
 
@@ -245,8 +245,8 @@ STEPFUNCTIONS_STATE_MACHINE_ARN=arn:aws:states:ap-southeast-1:761526718835:state
 ACCOUNT_ID=761526718835
 
 # Database and Security
-DATABASE_URL=postgresql://neondb_owner:[REDACTED]@ep-polished-band-a1rdok0t-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
-JWT_SECRET=production-jwt-secret-key
+DATABASE_URL=postgresql://***[REDACTED]***@***[REDACTED]***.neon.tech/neondb?sslmode=require
+JWT_SECRET=***[REDACTED]***
 ```
 
 ### Code Access Patterns
@@ -459,8 +459,8 @@ Response: {"configured": true, "region": "ap-southeast-1", "stateMachinesFound":
 #### Server-Side Variables (No prefix restrictions)
 | Variable | Purpose | Required | Example Value |
 |----------|---------|----------|---------------|
-| BAWS_ACCESS_KEY_ID | AWS API access | Yes | [REDACTED] |
-| BAWS_SECRET_ACCESS_KEY | AWS API secret | Yes | [REDACTED] |
+| BAWS_ACCESS_KEY_ID | AWS API access | Yes | AKIA***[REDACTED]*** |
+| BAWS_SECRET_ACCESS_KEY | AWS API secret | Yes | ***[REDACTED]*** |
 | DEFAULT_REGION | Primary AWS region | Yes | ap-southeast-1 |
 | BEDROCK_REGION | AWS Bedrock region | Yes | us-east-1 |
 | DATABASE_URL | Neon PostgreSQL connection | Yes | postgresql://... |
