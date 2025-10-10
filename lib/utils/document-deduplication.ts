@@ -9,7 +9,7 @@ export function generateFileHash(fileBuffer: Buffer): string {
 }
 
 /**
- * Checks if a document with the same hash, filename, and size already exists
+ * Checks if a document with the same hash already exists (content-based deduplication)
  */
 export async function findDuplicateDocument(
   fileHash: string,
@@ -26,13 +26,11 @@ export async function findDuplicateDocument(
       SELECT id, original_filename, processing_status, created_at
       FROM documents
       WHERE file_hash = $1
-        AND original_filename = $2
-        AND file_size_bytes = $3
         AND deleted_at IS NULL
         AND is_duplicate = false
       ORDER BY created_at ASC
       LIMIT 1
-    `, [fileHash, originalFilename, fileSizeBytes]);
+    `, [fileHash]);
 
     return result.rows[0] || null;
   } catch (error) {

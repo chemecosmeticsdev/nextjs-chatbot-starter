@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
     // Prepare response data
     const uploadResponse = {
       success: true,
-      isDuplicate: false,
+      isDuplicate: duplicateCheck.isDuplicate, // Use actual duplicate check result
       file: {
         id: fileId,
         fileName: file.name,
