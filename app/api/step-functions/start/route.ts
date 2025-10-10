@@ -114,15 +114,35 @@ export async function POST(request: NextRequest) {
       embeddingModel: 'amazon.titan-embed-text-v2:0'
     };
 
+    // Debug: Log environment variables being used
+    console.log('Environment variables check:', {
+      DEFAULT_REGION: process.env.DEFAULT_REGION,
+      ACCOUNT_ID: process.env.ACCOUNT_ID,
+      AWS_ACCOUNT_ID: process.env.AWS_ACCOUNT_ID,
+      STEPFUNCTIONS_STATE_MACHINE_ARN: process.env.STEPFUNCTIONS_STATE_MACHINE_ARN,
+      STEPFUNCTIONS_S3_BUCKET: process.env.STEPFUNCTIONS_S3_BUCKET
+    });
+
+    // Debug: Log the constructed stepFunctionsInput object
+    console.log('Step Functions Input Object:', JSON.stringify(stepFunctionsInput, null, 2));
+
     // Start Step Functions execution
     const stateMachineArn = process.env.STEPFUNCTIONS_STATE_MACHINE_ARN ||
-      `arn:aws:states:${process.env.DEFAULT_REGION}:${process.env.ACCOUNT_ID}:stateMachine:DocumentProcessingPipeline`;
+      `arn:aws:states:${process.env.DEFAULT_REGION}:${process.env.ACCOUNT_ID || process.env.AWS_ACCOUNT_ID}:stateMachine:DocumentProcessingPipeline`;
 
     const executionParams = {
       stateMachineArn,
       name: `DocumentProcessing-${executionId}`,
       input: JSON.stringify(stepFunctionsInput)
     };
+
+    // Debug: Log the final execution parameters
+    console.log('Step Functions Execution Params:', {
+      stateMachineArn,
+      name: executionParams.name,
+      inputLength: executionParams.input.length,
+      inputPreview: executionParams.input.substring(0, 200) + '...'
+    });
 
     console.log('Starting Step Functions execution:', {
       executionId,
