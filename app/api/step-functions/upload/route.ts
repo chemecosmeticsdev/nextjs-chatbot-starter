@@ -3,6 +3,7 @@ import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Upload } from '@aws-sdk/lib-storage';
 import { v4 as uuidv4 } from 'uuid';
+import { startStepFunctionExecution } from '@/lib/step-functions/service';
 
 // Initialize AWS S3
 const s3 = new S3Client({
@@ -145,38 +146,38 @@ export async function POST(request: NextRequest) {
     // Automatically start Step Functions execution if requested
     if (autoStart) {
       try {
-        // Call the start endpoint internally
-        const startUrl = new URL('/api/step-functions/start', request.url);
-        const startResponse = await fetch(startUrl.toString(), {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            fileName: file.name,
-            fileKey: uploadResult.Key,
-            fileSize: file.size,
-            mimeType: file.type,
-            uploadedBy,
-            documentType,
-            documentCategory,
-            metadata
-          })
+        console.log('Auto-starting Step Functions execution with direct function call...');
+
+        // Call the shared service function directly (eliminates SSL/fetch issues)
+        const startResult = await startStepFunctionExecution({
+          fileName: file.name,
+          fileKey: uploadResult.Key!,
+          fileSize: file.size,
+          mimeType: file.type,
+          uploadedBy,
+          documentType,
+          documentCategory,
+          metadata
         });
 
-        if (startResponse.ok) {
-          const startResult = await startResponse.json();
+        if (startResult.success) {
           uploadResponse.execution = startResult.execution;
+          console.log('Step Functions execution started successfully:', {
+            executionId: startResult.execution?.executionId,
+            documentId: startResult.execution?.documentId
+          });
         } else {
-          console.error('Failed to auto-start execution:', await startResponse.text());
+          console.error('Failed to auto-start execution:', startResult.error, startResult.details);
           uploadResponse.execution = {
-            error: 'Failed to start processing automatically'
+            error: startResult.error || 'Failed to start processing automatically',
+            details: startResult.details
           };
         }
       } catch (startError) {
         console.error('Auto-start execution error:', startError);
         uploadResponse.execution = {
-          error: 'Failed to start processing automatically'
+          error: 'Failed to start processing automatically',
+          details: startError instanceof Error ? startError.message : 'Unknown error'
         };
       }
     }
