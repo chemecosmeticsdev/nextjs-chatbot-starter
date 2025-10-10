@@ -147,8 +147,9 @@ export async function startStepFunctionExecution(request: StartExecutionRequest)
     };
     console.log('Step Functions Service - Environment variables status:', envDebug);
 
-    // Debug: Log the constructed stepFunctionsInput object
-    console.log('Step Functions Service - Input Object:', JSON.stringify(stepFunctionsInput, null, 2));
+    // Debug: Log the constructed stepFunctionsInput object (DEPLOYMENT v2 - fileHash fix)
+    console.log('Step Functions Service - Input Object (v2):', JSON.stringify(stepFunctionsInput, null, 2));
+    console.log('Step Functions Service - fileHash included:', !!stepFunctionsInput.fileHash);
 
     // Start Step Functions execution
     const stateMachineArn = process.env.STEPFUNCTIONS_STATE_MACHINE_ARN ||
