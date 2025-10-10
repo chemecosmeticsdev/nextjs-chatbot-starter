@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
         fileKey,
         uploadedBy: body.uploadedBy || null, // Use the uploadedBy from request or null for anonymous uploads
         status: 'RUNNING',
-        inputData: stepFunctionsInput
+        input: stepFunctionsInput
       });
     } catch (dbError) {
       console.error('Failed to store execution record:', dbError);
