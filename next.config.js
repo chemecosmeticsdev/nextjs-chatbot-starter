@@ -138,10 +138,30 @@ const nextConfig = {
 
     return config;
   },
-  // AWS Amplify handles environment variables natively
-  // DO NOT use env block - it interferes with Amplify's environment variable handling
-  // Client-side variables must use NEXT_PUBLIC_ prefix in Amplify console
-  // Server-side variables can use any naming convention
+  // Selective env block to expose server-side variables to Next.js runtime
+  // AWS Amplify injects variables at build time, but Next.js needs explicit mapping for runtime access
+  // NEXT_PUBLIC_ variables are handled automatically by Next.js/Amplify
+  env: {
+    // Database connection
+    DATABASE_URL: process.env.DATABASE_URL,
+
+    // Authentication
+    JWT_SECRET: process.env.JWT_SECRET,
+
+    // AWS credentials and configuration
+    BAWS_ACCESS_KEY_ID: process.env.BAWS_ACCESS_KEY_ID,
+    BAWS_SECRET_ACCESS_KEY: process.env.BAWS_SECRET_ACCESS_KEY,
+    DEFAULT_REGION: process.env.DEFAULT_REGION,
+    BEDROCK_REGION: process.env.BEDROCK_REGION,
+
+    // AWS account and bucket configuration
+    AWS_ACCOUNT_ID: process.env.AWS_ACCOUNT_ID || process.env.ACCOUNT_ID, // Fallback to ACCOUNT_ID
+    STEPFUNCTIONS_S3_BUCKET: process.env.STEPFUNCTIONS_S3_BUCKET,
+    S3_DOCUMENT_BUCKET: process.env.S3_DOCUMENT_BUCKET,
+
+    // Step Functions ARN
+    STEPFUNCTIONS_STATE_MACHINE_ARN: process.env.STEPFUNCTIONS_STATE_MACHINE_ARN,
+  },
 }
 
 module.exports = nextConfig
