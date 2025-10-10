@@ -2,6 +2,18 @@ import { Amplify } from 'aws-amplify';
 import { signIn, signOut, getCurrentUser, fetchAuthSession, SignInInput } from 'aws-amplify/auth';
 import crypto from 'crypto';
 
+/**
+ * Check if Cognito is properly configured
+ * @returns true if all required Cognito environment variables are present
+ */
+export function isCognitoConfigured(): boolean {
+  const userPoolId = process.env.COGNITO_USER_POOL_ID || process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
+  const clientId = process.env.COGNITO_CLIENT_ID || process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
+  const region = process.env.COGNITO_REGION || process.env.NEXT_PUBLIC_COGNITO_REGION;
+
+  return Boolean(userPoolId && clientId && region);
+}
+
 const awsConfig = {
   Auth: {
     Cognito: {
@@ -23,7 +35,14 @@ export function calculateSecretHash(username: string, clientId: string, clientSe
   return crypto.createHmac('SHA256', clientSecret).update(message).digest('base64');
 }
 
-Amplify.configure(awsConfig);
+// Only configure Amplify if Cognito is properly set up
+if (isCognitoConfigured()) {
+  Amplify.configure(awsConfig);
+  console.log('Cognito authentication configured successfully');
+} else {
+  console.warn('Cognito authentication not configured - missing required environment variables');
+  console.warn('Required: COGNITO_USER_POOL_ID, COGNITO_CLIENT_ID, COGNITO_REGION');
+}
 
 export interface CognitoUser {
   username: string;
@@ -41,6 +60,14 @@ export interface AuthResult {
 
 export class CognitoAuthService {
   static async login(email: string, password: string): Promise<AuthResult> {
+    // Check if Cognito is configured before attempting login
+    if (!isCognitoConfigured()) {
+      return {
+        success: false,
+        error: 'Auth UserPool not configured.'
+      };
+    }
+
     try {
       const signInInput: SignInInput = {
         username: email,

@@ -61,10 +61,10 @@ export async function GET(request: NextRequest) {
         { name: 'SQS_NORMAL_QUEUE_URL', value: process.env.SQS_NORMAL_QUEUE_URL, required: false },
         { name: 'SQS_LOW_QUEUE_URL', value: process.env.SQS_LOW_QUEUE_URL, required: false },
 
-        // Cognito
-        { name: 'COGNITO_USER_POOL_ID', value: process.env.COGNITO_USER_POOL_ID, required: false },
-        { name: 'COGNITO_CLIENT_ID', value: process.env.COGNITO_CLIENT_ID, required: false },
-        { name: 'COGNITO_REGION', value: process.env.COGNITO_REGION, required: false },
+        // Cognito (REQUIRED for authentication)
+        { name: 'COGNITO_USER_POOL_ID', value: process.env.COGNITO_USER_POOL_ID, required: true },
+        { name: 'COGNITO_CLIENT_ID', value: process.env.COGNITO_CLIENT_ID, required: true },
+        { name: 'COGNITO_REGION', value: process.env.COGNITO_REGION, required: true },
 
         // External APIs
         { name: 'MISTRAL_API_KEY', value: process.env.MISTRAL_API_KEY, required: false, masked: true },

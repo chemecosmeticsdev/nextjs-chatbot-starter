@@ -148,6 +148,12 @@ const nextConfig = {
     // Authentication
     JWT_SECRET: process.env.JWT_SECRET,
 
+    // AWS Cognito Authentication
+    COGNITO_USER_POOL_ID: process.env.COGNITO_USER_POOL_ID,
+    COGNITO_CLIENT_ID: process.env.COGNITO_CLIENT_ID,
+    COGNITO_REGION: process.env.COGNITO_REGION,
+    COGNITO_USER_POOL_ARN: process.env.COGNITO_USER_POOL_ARN,
+
     // AWS credentials and configuration
     BAWS_ACCESS_KEY_ID: process.env.BAWS_ACCESS_KEY_ID,
     BAWS_SECRET_ACCESS_KEY: process.env.BAWS_SECRET_ACCESS_KEY,
