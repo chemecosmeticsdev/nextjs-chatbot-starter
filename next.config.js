@@ -138,40 +138,6 @@ const nextConfig = {
 
     return config;
   },
-  env: {
-    DATABASE_URL: process.env.DATABASE_URL,
-    BAWS_ACCESS_KEY_ID: process.env.BAWS_ACCESS_KEY_ID,
-    BAWS_SECRET_ACCESS_KEY: process.env.BAWS_SECRET_ACCESS_KEY,
-    DEFAULT_REGION: process.env.DEFAULT_REGION,
-    BEDROCK_REGION: process.env.BEDROCK_REGION,
-    GITHUB_PAT: process.env.GITHUB_PAT,
-    COGNITO_USER_POOL_ID: process.env.COGNITO_USER_POOL_ID,
-    COGNITO_CLIENT_ID: process.env.COGNITO_CLIENT_ID,
-    COGNITO_REGION: process.env.COGNITO_REGION,
-    COGNITO_USER_POOL_ARN: process.env.COGNITO_USER_POOL_ARN,
-    SUPER_ADMIN_EMAIL: process.env.SUPER_ADMIN_EMAIL,
-    SUPER_ADMIN_PASSWORD: process.env.SUPER_ADMIN_PASSWORD,
-    NEXT_PUBLIC_COGNITO_USER_POOL_ID: process.env.COGNITO_USER_POOL_ID,
-    NEXT_PUBLIC_COGNITO_CLIENT_ID: process.env.COGNITO_CLIENT_ID,
-    NEXT_PUBLIC_COGNITO_REGION: process.env.COGNITO_REGION,
-    // AWS Amplify Production Configuration
-    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
-    S3_DOCUMENT_BUCKET: process.env.S3_DOCUMENT_BUCKET,
-    JWT_SECRET: process.env.JWT_SECRET,
-    MISTRAL_API_KEY: process.env.MISTRAL_API_KEY,
-    // AWS SQS Job Queue Configuration
-    SQS_CRITICAL_QUEUE_URL: process.env.SQS_CRITICAL_QUEUE_URL,
-    SQS_HIGH_QUEUE_URL: process.env.SQS_HIGH_QUEUE_URL,
-    SQS_NORMAL_QUEUE_URL: process.env.SQS_NORMAL_QUEUE_URL,
-    SQS_LOW_QUEUE_URL: process.env.SQS_LOW_QUEUE_URL,
-    SQS_CRITICAL_DLQ_URL: process.env.SQS_CRITICAL_DLQ_URL,
-    SQS_HIGH_DLQ_URL: process.env.SQS_HIGH_DLQ_URL,
-    SQS_NORMAL_DLQ_URL: process.env.SQS_NORMAL_DLQ_URL,
-    SQS_LOW_DLQ_URL: process.env.SQS_LOW_DLQ_URL,
-    // Step Functions Configuration
-    STEPFUNCTIONS_S3_BUCKET: process.env.STEPFUNCTIONS_S3_BUCKET,
-    ACCOUNT_ID: process.env.ACCOUNT_ID,
-  },
 }
 
 module.exports = nextConfig

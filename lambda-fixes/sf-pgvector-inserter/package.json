@@ -1,0 +1,12 @@
+{
+  "name": "sf-pgvector-inserter",
+  "version": "1.0.0",
+  "description": "Step Functions pgVector inserter for Neon PostgreSQL",
+  "main": "sf-pgvector-inserter.js",
+  "dependencies": {
+    "pg": "^8.11.3"
+  },
+  "engines": {
+    "node": ">=18.x"
+  }
+}

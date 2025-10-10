@@ -1,0 +1,12 @@
+{
+  "name": "sf-status-tracker-fixed",
+  "version": "2.0.0",
+  "description": "Step Functions Status Tracker - Fixed for correct database schema",
+  "main": "index.js",
+  "dependencies": {
+    "pg": "^8.11.3"
+  },
+  "engines": {
+    "node": ">=18.x"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "sf-ocr-processor-fixed",
+  "version": "2.0.0",
+  "description": "Step Functions OCR Processor with all dependencies",
+  "main": "index.js",
+  "dependencies": {
+    "pg": "^8.11.3",
+    "node-fetch": "^2.7.0",
+    "aws-sdk": "^2.1691.0"
+  },
+  "engines": {
+    "node": ">=18.x"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "executionId": "test-execution-001",
+  "documentId": "doc-test-001",
+  "fileName": "test-document.pdf",
+  "status": "PROCESSING_STARTED",
+  "s3Bucket": "test-bucket",
+  "s3Key": "test-key",
+  "mimeType": "application/pdf"
+}
