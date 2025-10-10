@@ -202,6 +202,7 @@ export async function POST(request: NextRequest) {
           fileKey: uploadResult.Key!,
           fileSize: file.size,
           mimeType: file.type,
+          fileHash: fileHash, // Pass the generated file hash
           uploadedBy,
           documentType,
           documentCategory,

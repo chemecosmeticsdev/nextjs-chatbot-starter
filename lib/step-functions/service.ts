@@ -40,6 +40,7 @@ export interface StartExecutionRequest {
   fileKey: string;
   fileSize: number;
   mimeType: string;
+  fileHash?: string;
   uploadedBy?: string;
   documentType?: string;
   documentCategory?: string;
@@ -121,6 +122,7 @@ export async function startStepFunctionExecution(request: StartExecutionRequest)
       s3Key: fileKey, // State machine expects s3Key parameter
       fileSize,
       mimeType,
+      fileHash: request.fileHash || null, // Include file hash for deduplication
       s3Bucket: bucketName,
       uploadedBy: request.uploadedBy || null,
       documentType: request.documentType || 'inci',
