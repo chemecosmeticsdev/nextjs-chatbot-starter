@@ -15,14 +15,19 @@ export async function GET(request: NextRequest) {
 
     const duration = Date.now() - start;
 
-    if (result && result.length > 0) {
+    // Handle different result structures from Drizzle ORM
+    // When fullResults: false, result might be an array directly
+    // or have a .rows property
+    const rows = Array.isArray(result) ? result : (result as any)?.rows || [];
+
+    if (rows && rows.length > 0) {
       return NextResponse.json({
         status: 'healthy',
         timestamp: new Date().toISOString(),
         database: {
           connected: true,
           response_time_ms: duration,
-          test_query_result: result[0],
+          test_query_result: rows[0],
           connection_info: {
             url_configured: !!process.env.DATABASE_URL,
             // Don't expose actual URL in health check
@@ -36,7 +41,12 @@ export async function GET(request: NextRequest) {
         database: {
           connected: false,
           error: 'Query returned no results',
-          response_time_ms: duration
+          response_time_ms: duration,
+          debug_info: {
+            result_type: typeof result,
+            result_is_array: Array.isArray(result),
+            result_keys: result ? Object.keys(result) : []
+          }
         }
       }, { status: 503 });
     }
