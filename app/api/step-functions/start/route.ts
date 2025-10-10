@@ -5,22 +5,31 @@ import { v4 as uuidv4 } from 'uuid';
 import { db } from '@/lib/db';
 import { stepFunctionExecutions, documents } from '@/lib/db/schema';
 
-// Initialize AWS services
-const stepFunctions = new SFNClient({
-  region: process.env.DEFAULT_REGION || 'ap-southeast-1',
-  credentials: {
-    accessKeyId: process.env.BAWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.BAWS_SECRET_ACCESS_KEY!,
-  },
-});
+// Helper function to get AWS clients
+function getAWSClients() {
+  // Check if environment variables are available
+  if (!process.env.BAWS_ACCESS_KEY_ID || !process.env.BAWS_SECRET_ACCESS_KEY) {
+    throw new Error('AWS credentials not configured');
+  }
 
-const s3 = new S3Client({
-  region: process.env.DEFAULT_REGION || 'ap-southeast-1',
-  credentials: {
-    accessKeyId: process.env.BAWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.BAWS_SECRET_ACCESS_KEY!,
-  },
-});
+  const stepFunctions = new SFNClient({
+    region: process.env.DEFAULT_REGION || 'ap-southeast-1',
+    credentials: {
+      accessKeyId: process.env.BAWS_ACCESS_KEY_ID,
+      secretAccessKey: process.env.BAWS_SECRET_ACCESS_KEY,
+    },
+  });
+
+  const s3 = new S3Client({
+    region: process.env.DEFAULT_REGION || 'ap-southeast-1',
+    credentials: {
+      accessKeyId: process.env.BAWS_ACCESS_KEY_ID,
+      secretAccessKey: process.env.BAWS_SECRET_ACCESS_KEY,
+    },
+  });
+
+  return { stepFunctions, s3 };
+}
 
 interface StartExecutionRequest {
   fileName: string;
@@ -35,6 +44,24 @@ interface StartExecutionRequest {
 
 export async function POST(request: NextRequest) {
   try {
+    // Get AWS clients (will throw if not configured)
+    let stepFunctions: SFNClient;
+    let s3: S3Client;
+
+    try {
+      const clients = getAWSClients();
+      stepFunctions = clients.stepFunctions;
+      s3 = clients.s3;
+    } catch (clientError) {
+      return NextResponse.json(
+        {
+          error: 'AWS services not configured',
+          details: clientError instanceof Error ? clientError.message : 'Unknown configuration error'
+        },
+        { status: 503 }
+      );
+    }
+
     const body: StartExecutionRequest = await request.json();
 
     // Validate required fields
@@ -181,6 +208,20 @@ export async function GET() {
       return NextResponse.json({
         configured: false,
         error: `Missing environment variables: ${missingVars.join(', ')}`
+      });
+    }
+
+    // Get AWS clients (will throw if not configured)
+    let stepFunctions: SFNClient;
+
+    try {
+      const clients = getAWSClients();
+      stepFunctions = clients.stepFunctions;
+    } catch (clientError) {
+      return NextResponse.json({
+        configured: false,
+        error: 'Failed to initialize AWS clients',
+        details: clientError instanceof Error ? clientError.message : 'Unknown error'
       });
     }
 
