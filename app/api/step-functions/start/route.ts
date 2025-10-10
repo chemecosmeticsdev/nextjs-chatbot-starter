@@ -114,16 +114,17 @@ export async function POST(request: NextRequest) {
       embeddingModel: 'amazon.titan-embed-text-v2:0'
     };
 
-    // Debug: Log environment variables being used
+    // Debug: Log environment variables status (secure - no sensitive values)
     const envDebug = {
-      DEFAULT_REGION: process.env.DEFAULT_REGION,
-      ACCOUNT_ID: process.env.ACCOUNT_ID,
-      AWS_ACCOUNT_ID: process.env.AWS_ACCOUNT_ID,
-      STEPFUNCTIONS_STATE_MACHINE_ARN: process.env.STEPFUNCTIONS_STATE_MACHINE_ARN,
-      STEPFUNCTIONS_S3_BUCKET: process.env.STEPFUNCTIONS_S3_BUCKET,
-      hasBAWSCredentials: !!(process.env.BAWS_ACCESS_KEY_ID && process.env.BAWS_SECRET_ACCESS_KEY)
+      hasDefaultRegion: !!process.env.DEFAULT_REGION,
+      hasAccountId: !!(process.env.ACCOUNT_ID || process.env.AWS_ACCOUNT_ID),
+      hasStateMachineArn: !!process.env.STEPFUNCTIONS_STATE_MACHINE_ARN,
+      hasS3Bucket: !!process.env.STEPFUNCTIONS_S3_BUCKET,
+      hasBAWSCredentials: !!(process.env.BAWS_ACCESS_KEY_ID && process.env.BAWS_SECRET_ACCESS_KEY),
+      regionValue: process.env.DEFAULT_REGION || 'not-set',
+      bucketValue: process.env.STEPFUNCTIONS_S3_BUCKET || 'not-set'
     };
-    console.log('Environment variables check:', envDebug);
+    console.log('Environment variables status:', envDebug);
 
     // Debug: Log the constructed stepFunctionsInput object
     console.log('Step Functions Input Object:', JSON.stringify(stepFunctionsInput, null, 2));
@@ -138,12 +139,14 @@ export async function POST(request: NextRequest) {
       input: JSON.stringify(stepFunctionsInput)
     };
 
-    // Debug: Log the final execution parameters
+    // Debug: Log the final execution parameters (secure)
     console.log('Step Functions Execution Params:', {
-      stateMachineArn,
+      stateMachineArnLength: stateMachineArn.length,
+      stateMachineArnValid: stateMachineArn.includes('DocumentProcessingPipeline'),
       name: executionParams.name,
       inputLength: executionParams.input.length,
-      inputPreview: executionParams.input.substring(0, 200) + '...'
+      inputHasDocumentId: executionParams.input.includes('documentId'),
+      inputHasFileName: executionParams.input.includes('fileName')
     });
 
     console.log('Starting Step Functions execution:', {
@@ -209,11 +212,11 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString()
     };
 
-    // In development or when debugging, include environment diagnostic
-    if (process.env.NODE_ENV === 'development' || process.env.DEBUG_MODE === 'true') {
+    // In development, include secure environment diagnostic (no sensitive values)
+    if (process.env.NODE_ENV === 'development') {
       errorResponse.debug = {
         hasCredentials: !!(process.env.BAWS_ACCESS_KEY_ID && process.env.BAWS_SECRET_ACCESS_KEY),
-        region: process.env.DEFAULT_REGION,
+        hasRegion: !!process.env.DEFAULT_REGION,
         hasAccountId: !!(process.env.ACCOUNT_ID || process.env.AWS_ACCOUNT_ID),
         hasStateMachineArn: !!process.env.STEPFUNCTIONS_STATE_MACHINE_ARN,
         hasBucket: !!process.env.STEPFUNCTIONS_S3_BUCKET
