@@ -257,7 +257,9 @@ export async function GET() {
     if (missingVars.length > 0) {
       return NextResponse.json({
         configured: false,
-        error: `Missing environment variables: ${missingVars.join(', ')}`
+        error: `Missing environment variables: ${missingVars.join(', ')}`,
+        debug_timestamp: new Date().toISOString(),
+        debug_deployment_test: 'If you see this message, the deployment worked'
       });
     }
 
