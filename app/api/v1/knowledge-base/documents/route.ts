@@ -44,6 +44,9 @@ export async function GET(request: NextRequest) {
     // Build filters
     const conditions = [];
 
+    // Always exclude soft-deleted documents
+    conditions.push(sql`${documents.deletedAt} IS NULL`);
+
     if (search) {
       conditions.push(
         or(
@@ -172,9 +175,17 @@ export async function GET(request: NextRequest) {
           limit,
           total: totalCount,
           totalPages
-        }
+        },
+        timestamp: new Date().toISOString() // Add timestamp for cache busting
       }),
-      { status: 200 }
+      {
+        status: 200,
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      }
     );
 
   } catch (error) {

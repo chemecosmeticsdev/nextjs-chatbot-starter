@@ -100,6 +100,9 @@ export default function DocumentsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // State for document actions
   const [actionLoading, setActionLoading] = useState<{ [key: string]: boolean }>({});
@@ -162,12 +165,20 @@ export default function DocumentsPage() {
     uploadedBy: apiDoc.uploadedBy
   });
 
-  const fetchDocuments = async () => {
+  const fetchDocuments = async (isBackgroundRefresh = false) => {
     try {
-      setLoading(true);
+      if (!isBackgroundRefresh) {
+        setLoading(true);
+      } else {
+        setIsRefreshing(true);
+      }
       setError(null);
 
-      const response = await fetch('/api/v1/knowledge-base/documents?limit=50');
+      // Add cache-busting parameter to ensure fresh data
+      const timestamp = Date.now();
+      const response = await fetch(`/api/v1/knowledge-base/documents?limit=50&_t=${timestamp}`, {
+        cache: 'no-store'
+      });
 
       if (!response.ok) {
         throw new Error(`API request failed: ${response.status} ${response.statusText}`);
@@ -178,20 +189,65 @@ export default function DocumentsPage() {
       if (apiResponse.success && apiResponse.data.documents) {
         const transformedDocuments = apiResponse.data.documents.map(transformDocument);
         setDocuments(transformedDocuments);
+        setLastRefresh(new Date());
       } else {
         throw new Error('Invalid API response format');
       }
     } catch (error) {
       console.error('Error fetching documents:', error);
-      setError(error instanceof Error ? error.message : 'Failed to load documents');
-      setDocuments([]);
+      if (!isBackgroundRefresh) {
+        setError(error instanceof Error ? error.message : 'Failed to load documents');
+        setDocuments([]);
+      }
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
+  };
+
+  // Manual refresh function
+  const handleManualRefresh = () => {
+    fetchDocuments(false);
+    toast.success('Document list refreshed');
   };
 
   useEffect(() => {
     fetchDocuments();
+  }, []);
+
+  // Auto-refresh mechanism - poll every 30 seconds
+  useEffect(() => {
+    if (!autoRefreshEnabled) return;
+
+    const interval = setInterval(() => {
+      fetchDocuments(true); // Background refresh
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [autoRefreshEnabled]);
+
+  // Refresh when tab becomes visible again
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && autoRefreshEnabled) {
+        fetchDocuments(true);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [autoRefreshEnabled]);
+
+  // Listen for upload events from other parts of the app
+  useEffect(() => {
+    const handleDocumentUploaded = () => {
+      // Refresh immediately when a document is uploaded
+      setTimeout(() => fetchDocuments(true), 1000);
+    };
+
+    // Custom event listener for document uploads
+    window.addEventListener('documentUploaded', handleDocumentUploaded);
+    return () => window.removeEventListener('documentUploaded', handleDocumentUploaded);
   }, []);
 
   const getStatusBadge = (status: string) => {
@@ -208,13 +264,20 @@ export default function DocumentsPage() {
   };
 
   // Search functionality
-  const fetchDocumentsWithSearch = async (search?: string) => {
+  const fetchDocumentsWithSearch = async (search?: string, isBackgroundRefresh = false) => {
     try {
-      setLoading(true);
+      if (!isBackgroundRefresh) {
+        setLoading(true);
+      } else {
+        setIsRefreshing(true);
+      }
       setError(null);
 
       const searchParam = search ? `&search=${encodeURIComponent(search)}` : '';
-      const response = await fetch(`/api/v1/knowledge-base/documents?limit=50${searchParam}`);
+      const timestamp = Date.now();
+      const response = await fetch(`/api/v1/knowledge-base/documents?limit=50${searchParam}&_t=${timestamp}`, {
+        cache: 'no-store'
+      });
 
       if (!response.ok) {
         throw new Error(`API request failed: ${response.status} ${response.statusText}`);
@@ -225,15 +288,19 @@ export default function DocumentsPage() {
       if (apiResponse.success && apiResponse.data.documents) {
         const transformedDocuments = apiResponse.data.documents.map(transformDocument);
         setDocuments(transformedDocuments);
+        setLastRefresh(new Date());
       } else {
         throw new Error('Invalid API response format');
       }
     } catch (error) {
       console.error('Error fetching documents:', error);
-      setError(error instanceof Error ? error.message : 'Failed to load documents');
-      setDocuments([]);
+      if (!isBackgroundRefresh) {
+        setError(error instanceof Error ? error.message : 'Failed to load documents');
+        setDocuments([]);
+      }
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   };
 
@@ -564,6 +631,22 @@ export default function DocumentsPage() {
               <CardTitle>Document Library</CardTitle>
               <CardDescription>
                 All uploaded documents and their processing status
+                {lastRefresh && (
+                  <span className="block text-xs text-muted-foreground mt-1">
+                    Last updated: {lastRefresh.toLocaleTimeString()}
+                    {autoRefreshEnabled && (
+                      <span className="ml-2 inline-flex items-center">
+                        • Auto-refresh enabled
+                        {isRefreshing && (
+                          <>
+                            <RefreshCw className="ml-1 h-3 w-3 animate-spin" />
+                            <span className="ml-1">refreshing...</span>
+                          </>
+                        )}
+                      </span>
+                    )}
+                  </span>
+                )}
               </CardDescription>
             </div>
             <div className="flex items-center space-x-2">
@@ -576,6 +659,24 @@ export default function DocumentsPage() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleManualRefresh}
+                disabled={loading || isRefreshing}
+                title="Refresh document list"
+              >
+                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              </Button>
+              <Button
+                variant={autoRefreshEnabled ? "default" : "outline"}
+                size="sm"
+                onClick={() => setAutoRefreshEnabled(!autoRefreshEnabled)}
+                title={autoRefreshEnabled ? "Disable auto-refresh" : "Enable auto-refresh"}
+              >
+                <RefreshCw className="h-4 w-4 mr-1" />
+                Auto
+              </Button>
               <Button variant="outline" size="icon">
                 <Filter className="h-4 w-4" />
               </Button>

@@ -6,6 +6,11 @@ import { v4 as uuidv4 } from 'uuid';
 import { db } from '@/lib/db';
 import { documents } from '@/lib/db/schema';
 import { jobQueue, JobType, JobPriority } from '@/lib/services/job-queue';
+import {
+  generateFileHash,
+  checkForDuplicates,
+  processDuplicateResult
+} from '@/lib/utils/document-deduplication';
 
 // File upload configuration
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
@@ -51,8 +56,10 @@ interface UploadResult {
       documentId: string;
       jobId: string;
       filename: string;
-      status: 'queued' | 'error';
+      status: 'queued' | 'error' | 'duplicate';
       error?: string;
+      existingDocumentId?: string;
+      message?: string;
     }>;
     processingMethod: 'batch' | 'individual';
     errors: string[];
@@ -163,22 +170,33 @@ async function processUploadedFile(
   file: File,
   settings: UploadSettings,
   userId: string
-): Promise<{ documentId: string; filePath: string; error?: string }> {
+): Promise<{ documentId: string; filePath: string; error?: string; isDuplicate?: boolean; existingDocumentId?: string }> {
   try {
-    // Generate unique filename
+    // Convert file to buffer and generate hash for deduplication
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+    const fileHash = generateFileHash(buffer);
+
+    console.log(`[Upload API] 🔍 Generated file hash for ${file.name}: ${fileHash.substring(0, 12)}...`);
+
+    // Check for duplicates before processing
+    const duplicateCheck = await checkForDuplicates(fileHash, file.name, file.size);
+
+    console.log(`[Upload API] 🔍 Duplicate check result for ${file.name}:`, {
+      isDuplicate: duplicateCheck.isDuplicate,
+      similarityLevel: duplicateCheck.similarityLevel,
+      action: duplicateCheck.action
+    });
+
+    // Generate unique filename for storage
     const fileExtension = file.name.split('.').pop() || '';
     const uniqueFilename = `${uuidv4()}.${fileExtension}`;
     const filePath = join(UPLOAD_DIR, uniqueFilename);
 
-    // Save file to disk
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    await writeFile(filePath, buffer);
-
     // Extract metadata from filename
     const extractedMetadata = extractMetadataFromFilename(file.name);
 
-    // Create document record in database
+    // Create document record in database (even for duplicates, for tracking)
     const [document] = await db.insert(documents).values({
       originalFilename: file.name,
       filename: file.name,
@@ -188,7 +206,8 @@ async function processUploadedFile(
       mimeType: file.type,
       uploadedBy: userId,
       documentType: 'inci', // Default type, will be enhanced by AI
-      processingStatus: 'pending',
+      processingStatus: duplicateCheck.isDuplicate ? 'pending' : 'pending',
+      fileHash: fileHash, // Store the file hash for future deduplication
 
       // Metadata from settings or filename extraction
       supplierName: settings.supplierName || extractedMetadata.supplierName,
@@ -200,13 +219,33 @@ async function processUploadedFile(
         uploadSettings: settings,
         extractedFromFilename: extractedMetadata,
         uploadMethod: 'direct_upload',
-        processingMethod: settings.processingMethod
+        processingMethod: settings.processingMethod,
+        fileHash: fileHash.substring(0, 12), // Store short hash for reference
+        duplicateCheckResult: duplicateCheck
       }
     }).returning();
 
+    // Process duplicate result
+    const duplicateResult = await processDuplicateResult(duplicateCheck, document.id);
+
+    if (duplicateResult.shouldProceed) {
+      // Save file to disk only if we're proceeding with processing
+      await writeFile(filePath, buffer);
+      console.log(`[Upload API] ✅ File saved and ready for processing: ${file.name}`);
+    } else {
+      console.log(`[Upload API] 🚫 ${duplicateResult.message}`);
+      return {
+        documentId: document.id,
+        filePath: filePath,
+        isDuplicate: true,
+        existingDocumentId: duplicateResult.existingDocumentId
+      };
+    }
+
     return {
       documentId: document.id,
-      filePath: filePath
+      filePath: filePath,
+      isDuplicate: false
     };
 
   } catch (error) {
@@ -366,7 +405,22 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      // Create processing job
+      // Handle duplicate files - skip job creation but report success
+      if (uploadResult.isDuplicate) {
+        console.log(`[Upload API] 🔄 Duplicate detected for ${file.name}, referencing existing document`);
+        processedFiles.push({
+          documentId: uploadResult.documentId,
+          jobId: 'duplicate',
+          filename: file.name,
+          status: 'duplicate',
+          existingDocumentId: uploadResult.existingDocumentId,
+          message: 'File already exists and has been processed'
+        });
+        successCount++;
+        continue;
+      }
+
+      // Create processing job for non-duplicate files
       const jobResult = await createProcessingJob(
         uploadResult.documentId,
         uploadResult.filePath,

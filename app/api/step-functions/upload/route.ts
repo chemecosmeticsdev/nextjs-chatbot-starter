@@ -4,6 +4,11 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Upload } from '@aws-sdk/lib-storage';
 import { v4 as uuidv4 } from 'uuid';
 import { startStepFunctionExecution } from '@/lib/step-functions/service';
+import {
+  generateFileHash,
+  checkForDuplicates,
+  processDuplicateResult
+} from '@/lib/utils/document-deduplication';
 
 // Initialize AWS S3
 const s3 = new S3Client({
@@ -78,6 +83,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Convert file to buffer and generate hash for deduplication
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const fileHash = generateFileHash(buffer);
+
+    console.log(`[Step Functions Upload] 🔍 Generated file hash for ${file.name}: ${fileHash.substring(0, 12)}...`);
+
+    // Check for duplicates before S3 upload
+    const duplicateCheck = await checkForDuplicates(fileHash, file.name, file.size);
+
+    console.log(`[Step Functions Upload] 🔍 Duplicate check result for ${file.name}:`, {
+      isDuplicate: duplicateCheck.isDuplicate,
+      similarityLevel: duplicateCheck.similarityLevel,
+      action: duplicateCheck.action
+    });
+
+    // Handle duplicate files - return existing document info instead of processing
+    if (duplicateCheck.isDuplicate && duplicateCheck.action === 'reject') {
+      console.log(`[Step Functions Upload] 🚫 Duplicate file rejected: ${file.name}`);
+      return NextResponse.json({
+        success: true,
+        isDuplicate: true,
+        existingDocument: duplicateCheck.existingDocument,
+        message: 'File already exists and has been processed',
+        file: {
+          fileName: file.name,
+          fileSize: file.size,
+          mimeType: file.type,
+          status: 'duplicate'
+        }
+      });
+    }
+
     // Generate unique file key
     const fileId = uuidv4();
     const fileExtension = SUPPORTED_MIME_TYPES[file.type as keyof typeof SUPPORTED_MIME_TYPES]?.extension || 'bin';
@@ -88,12 +126,9 @@ export async function POST(request: NextRequest) {
       fileName: file.name,
       fileSize: file.size,
       mimeType: file.type,
-      fileKey
+      fileKey,
+      fileHash: fileHash.substring(0, 12)
     });
-
-    // Convert file to buffer
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
 
     // Upload to S3
     const uploadParams = {
@@ -106,7 +141,13 @@ export async function POST(request: NextRequest) {
         'original-filename': file.name,
         'uploaded-by': uploadedBy || 'anonymous',
         'upload-timestamp': new Date().toISOString(),
-        'file-id': fileId
+        'file-id': fileId,
+        'file-hash': fileHash,
+        'duplicate-check': JSON.stringify({
+          isDuplicate: duplicateCheck.isDuplicate,
+          similarityLevel: duplicateCheck.similarityLevel,
+          action: duplicateCheck.action
+        })
       },
       // Server-side encryption
       ServerSideEncryption: 'AES256'
@@ -128,6 +169,7 @@ export async function POST(request: NextRequest) {
     // Prepare response data
     const uploadResponse = {
       success: true,
+      isDuplicate: false,
       file: {
         id: fileId,
         fileName: file.name,
@@ -139,7 +181,13 @@ export async function POST(request: NextRequest) {
         uploadedBy,
         documentType,
         documentCategory,
-        metadata
+        metadata,
+        fileHash: fileHash.substring(0, 12), // Include short hash for reference
+        duplicateCheck: {
+          isDuplicate: duplicateCheck.isDuplicate,
+          similarityLevel: duplicateCheck.similarityLevel,
+          action: duplicateCheck.action
+        }
       }
     };
 
