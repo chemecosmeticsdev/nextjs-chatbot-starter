@@ -115,13 +115,15 @@ export async function POST(request: NextRequest) {
     };
 
     // Debug: Log environment variables being used
-    console.log('Environment variables check:', {
+    const envDebug = {
       DEFAULT_REGION: process.env.DEFAULT_REGION,
       ACCOUNT_ID: process.env.ACCOUNT_ID,
       AWS_ACCOUNT_ID: process.env.AWS_ACCOUNT_ID,
       STEPFUNCTIONS_STATE_MACHINE_ARN: process.env.STEPFUNCTIONS_STATE_MACHINE_ARN,
-      STEPFUNCTIONS_S3_BUCKET: process.env.STEPFUNCTIONS_S3_BUCKET
-    });
+      STEPFUNCTIONS_S3_BUCKET: process.env.STEPFUNCTIONS_S3_BUCKET,
+      hasBAWSCredentials: !!(process.env.BAWS_ACCESS_KEY_ID && process.env.BAWS_SECRET_ACCESS_KEY)
+    };
+    console.log('Environment variables check:', envDebug);
 
     // Debug: Log the constructed stepFunctionsInput object
     console.log('Step Functions Input Object:', JSON.stringify(stepFunctionsInput, null, 2));
@@ -200,13 +202,25 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Step Functions execution error:', error);
 
-    return NextResponse.json(
-      {
-        error: 'Failed to start document processing',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    );
+    // Provide detailed error information for debugging
+    const errorResponse: any = {
+      error: 'Failed to start document processing',
+      details: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    };
+
+    // In development or when debugging, include environment diagnostic
+    if (process.env.NODE_ENV === 'development' || process.env.DEBUG_MODE === 'true') {
+      errorResponse.debug = {
+        hasCredentials: !!(process.env.BAWS_ACCESS_KEY_ID && process.env.BAWS_SECRET_ACCESS_KEY),
+        region: process.env.DEFAULT_REGION,
+        hasAccountId: !!(process.env.ACCOUNT_ID || process.env.AWS_ACCOUNT_ID),
+        hasStateMachineArn: !!process.env.STEPFUNCTIONS_STATE_MACHINE_ARN,
+        hasBucket: !!process.env.STEPFUNCTIONS_S3_BUCKET
+      };
+    }
+
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 }
 
