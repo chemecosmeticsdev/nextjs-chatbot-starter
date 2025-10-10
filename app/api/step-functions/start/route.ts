@@ -239,7 +239,20 @@ export async function GET() {
       'STEPFUNCTIONS_S3_BUCKET'
     ];
 
-    const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+    const missingVars = requiredEnvVars.filter(varName => {
+      const value = process.env[varName];
+      const isMissing = !value || value.trim() === '';
+
+      // Debug: Log each variable check
+      console.log(`Checking ${varName}:`, {
+        exists: !!value,
+        length: value?.length || 0,
+        isEmpty: !value || value.trim() === '',
+        value: varName.includes('SECRET') ? '[REDACTED]' : value
+      });
+
+      return isMissing;
+    });
 
     if (missingVars.length > 0) {
       return NextResponse.json({
