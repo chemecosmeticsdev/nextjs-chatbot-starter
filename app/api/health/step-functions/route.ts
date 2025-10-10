@@ -11,11 +11,15 @@ export async function GET(request: NextRequest) {
 
     // Check if required environment variables are present
     const requiredVars = {
-      accessKeyId: process.env.BAWS_ACCESS_KEY_ID,
-      secretAccessKey: process.env.BAWS_SECRET_ACCESS_KEY,
-      region: process.env.DEFAULT_REGION,
-      stateMachineArn: process.env.STEPFUNCTIONS_STATE_MACHINE_ARN
+      BAWS_ACCESS_KEY_ID: process.env.BAWS_ACCESS_KEY_ID,
+      BAWS_SECRET_ACCESS_KEY: process.env.BAWS_SECRET_ACCESS_KEY,
+      DEFAULT_REGION: process.env.DEFAULT_REGION,
+      ACCOUNT_ID: process.env.ACCOUNT_ID
     };
+
+    // Construct or use provided state machine ARN
+    const stateMachineArn = process.env.STEPFUNCTIONS_STATE_MACHINE_ARN ||
+      `arn:aws:states:${requiredVars.DEFAULT_REGION}:${requiredVars.ACCOUNT_ID}:stateMachine:DocumentProcessingPipeline`;
 
     const missingVars = Object.entries(requiredVars)
       .filter(([key, value]) => !value)
@@ -35,17 +39,17 @@ export async function GET(request: NextRequest) {
 
     // Initialize Step Functions client
     const sfnClient = new SFNClient({
-      region: requiredVars.region,
+      region: requiredVars.DEFAULT_REGION,
       credentials: {
-        accessKeyId: requiredVars.accessKeyId!,
-        secretAccessKey: requiredVars.secretAccessKey!
+        accessKeyId: requiredVars.BAWS_ACCESS_KEY_ID!,
+        secretAccessKey: requiredVars.BAWS_SECRET_ACCESS_KEY!
       }
     });
 
     try {
       // Test by describing the state machine
       const command = new DescribeStateMachineCommand({
-        stateMachineArn: requiredVars.stateMachineArn!
+        stateMachineArn: stateMachineArn
       });
 
       const response = await sfnClient.send(command);
