@@ -254,13 +254,17 @@ export async function GET() {
       return isMissing;
     });
 
+    // TEMPORARY BYPASS: Force proceed even if variables detected as missing
+    // This will help us test the actual Step Functions execution and see CloudWatch logs
     if (missingVars.length > 0) {
-      return NextResponse.json({
-        configured: false,
-        error: `Missing environment variables: ${missingVars.join(', ')}`,
-        debug_timestamp: new Date().toISOString(),
-        debug_deployment_test: 'If you see this message, the deployment worked'
+      console.log('DETECTED MISSING VARS BUT BYPASSING:', missingVars);
+      console.log('RAW ENV VALUES:', {
+        BAWS_ACCESS_KEY_ID: !!process.env.BAWS_ACCESS_KEY_ID,
+        BAWS_SECRET_ACCESS_KEY: !!process.env.BAWS_SECRET_ACCESS_KEY,
+        DEFAULT_REGION: process.env.DEFAULT_REGION,
+        STEPFUNCTIONS_S3_BUCKET: process.env.STEPFUNCTIONS_S3_BUCKET
       });
+      // Don't return early - continue to test actual functionality
     }
 
     // Get AWS clients (will throw if not configured)
