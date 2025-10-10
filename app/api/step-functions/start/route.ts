@@ -268,10 +268,21 @@ export async function GET() {
       const clients = getAWSClients();
       stepFunctions = clients.stepFunctions;
     } catch (clientError) {
+      // Enhanced error reporting to understand why getAWSClients() fails
       return NextResponse.json({
         configured: false,
         error: 'Failed to initialize AWS clients',
-        details: clientError instanceof Error ? clientError.message : 'Unknown error'
+        details: clientError instanceof Error ? clientError.message : 'Unknown error',
+        diagnostics: {
+          BAWS_ACCESS_KEY_ID_present: !!process.env.BAWS_ACCESS_KEY_ID,
+          BAWS_SECRET_ACCESS_KEY_present: !!process.env.BAWS_SECRET_ACCESS_KEY,
+          DEFAULT_REGION_present: !!process.env.DEFAULT_REGION,
+          STEPFUNCTIONS_S3_BUCKET_present: !!process.env.STEPFUNCTIONS_S3_BUCKET,
+          values: {
+            DEFAULT_REGION: process.env.DEFAULT_REGION,
+            STEPFUNCTIONS_S3_BUCKET: process.env.STEPFUNCTIONS_S3_BUCKET
+          }
+        }
       });
     }
 
