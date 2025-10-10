@@ -125,13 +125,11 @@ export async function POST(request: NextRequest) {
       await db.insert(stepFunctionExecutions).values({
         executionArn: executionResult.executionArn!,
         documentId,
-        userId: '525baa17-e509-4f4f-a6e8-51fb8d570489', // Use existing user ID
+        fileName,
+        fileKey,
+        uploadedBy: body.uploadedBy || null, // Use the uploadedBy from request or null for anonymous uploads
         status: 'RUNNING',
-        s3Bucket: bucketName,
-        s3Key: fileKey,
-        inputData: stepFunctionsInput,
-        totalSteps: 7,
-        completedSteps: 0
+        inputData: stepFunctionsInput
       });
     } catch (dbError) {
       console.error('Failed to store execution record:', dbError);

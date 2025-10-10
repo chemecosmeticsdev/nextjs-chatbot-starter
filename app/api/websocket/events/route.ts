@@ -57,32 +57,74 @@ export async function GET(request: NextRequest) {
   // If monitoring specific execution, send current status
   if (executionId) {
     try {
+      console.log('WebSocket: Getting initial status for execution:', executionId);
       const currentStatus = await getExecutionStatus(executionId);
       if (currentStatus) {
+        console.log('WebSocket: Sending initial status:', currentStatus.execution.status);
         await sendSSEMessage(writer, {
           type: 'execution_update',
           data: currentStatus,
           executionId,
           timestamp: new Date().toISOString()
         });
+      } else {
+        console.log('WebSocket: No initial status found for execution:', executionId);
+        // Send a "not found" status instead of failing silently
+        await sendSSEMessage(writer, {
+          type: 'execution_update',
+          data: {
+            execution: {
+              id: executionId,
+              status: 'NOT_FOUND',
+              error: 'Execution not found in database'
+            }
+          },
+          executionId,
+          timestamp: new Date().toISOString()
+        });
       }
     } catch (error) {
       console.error('Failed to get initial status:', error);
+      // Send error status to maintain connection
+      await sendSSEMessage(writer, {
+        type: 'error',
+        data: {
+          message: 'Failed to get execution status',
+          error: error instanceof Error ? error.message : 'Unknown error'
+        },
+        executionId,
+        timestamp: new Date().toISOString()
+      });
     }
   }
 
   // Set up heartbeat
   const heartbeatInterval = setInterval(async () => {
     try {
-      await sendSSEMessage(writer, {
-        type: 'heartbeat',
-        data: { timestamp: new Date().toISOString() },
-        timestamp: new Date().toISOString()
-      });
+      if (activeConnections.has(connectionId)) {
+        await sendSSEMessage(writer, {
+          type: 'heartbeat',
+          data: {
+            timestamp: new Date().toISOString(),
+            connectionId,
+            activeConnections: activeConnections.size
+          },
+          timestamp: new Date().toISOString()
+        });
+        console.log(`WebSocket heartbeat sent to ${connectionId}, active connections: ${activeConnections.size}`);
+      } else {
+        console.log(`Connection ${connectionId} no longer active, stopping heartbeat`);
+        clearInterval(heartbeatInterval);
+      }
     } catch (error) {
-      console.error('Heartbeat failed:', error);
+      console.error('Heartbeat failed for connection', connectionId, ':', error);
       clearInterval(heartbeatInterval);
       activeConnections.delete(connectionId);
+      try {
+        writer.close();
+      } catch (closeError) {
+        console.error('Failed to close writer after heartbeat failure:', closeError);
+      }
     }
   }, 30000); // 30 seconds
 
@@ -166,16 +208,30 @@ async function sendSSEMessage(writer: WritableStreamDefaultWriter, message: SSEM
 // Get current execution status
 async function getExecutionStatus(executionId: string) {
   try {
-    // Get execution record
-    const execution = await db
+    console.log('Getting execution status for:', executionId);
+
+    // Get execution record - try both by ID and by execution ARN
+    let execution = await db
       .select()
       .from(stepFunctionExecutions)
       .where(eq(stepFunctionExecutions.id, executionId))
       .limit(1);
 
+    // If not found by ID, try by execution ARN (in case executionId is actually an ARN)
     if (execution.length === 0) {
+      execution = await db
+        .select()
+        .from(stepFunctionExecutions)
+        .where(eq(stepFunctionExecutions.executionArn, executionId))
+        .limit(1);
+    }
+
+    if (execution.length === 0) {
+      console.log('No execution found for ID:', executionId);
       return null;
     }
+
+    console.log('Found execution:', execution[0].id);
 
     // Get processing steps
     const steps = await db
@@ -183,6 +239,8 @@ async function getExecutionStatus(executionId: string) {
       .from(pipelineActivityLogs)
       .where(eq(pipelineActivityLogs.executionId, execution[0].id))
       .orderBy(pipelineActivityLogs.timestamp);
+
+    console.log('Found steps:', steps.length);
 
     // Calculate progress
     const totalSteps = 7;
@@ -194,7 +252,7 @@ async function getExecutionStatus(executionId: string) {
       execution: {
         id: execution[0].id,
         documentId: execution[0].documentId,
-        fileName: execution[0].fileName,
+        fileName: execution[0].fileName || 'Unknown',
         status: execution[0].status,
         startedAt: execution[0].startedAt,
         endedAt: execution[0].endedAt
@@ -207,8 +265,8 @@ async function getExecutionStatus(executionId: string) {
         failed: failedSteps
       },
       steps: steps.map(step => ({
-        name: step.stage,
-        message: step.message,
+        name: step.stage || 'Unknown',
+        message: step.message || '',
         logLevel: step.logLevel,
         timestamp: step.timestamp,
         details: step.details
@@ -217,7 +275,26 @@ async function getExecutionStatus(executionId: string) {
 
   } catch (error) {
     console.error('Failed to get execution status:', error);
-    return null;
+    // Return a basic error status instead of null to maintain connection
+    return {
+      execution: {
+        id: executionId,
+        documentId: null,
+        fileName: 'Unknown',
+        status: 'FAILED',
+        startedAt: new Date().toISOString(),
+        endedAt: null
+      },
+      progress: {
+        percentage: 0,
+        completed: 0,
+        total: 7,
+        running: 0,
+        failed: 1
+      },
+      steps: [],
+      error: error instanceof Error ? error.message : 'Database query failed'
+    };
   }
 }
 
