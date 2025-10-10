@@ -138,18 +138,10 @@ const nextConfig = {
 
     return config;
   },
-  // Client-side environment variables (NEXT_PUBLIC_ prefix required for browser access)
-  // Only include variables needed by client-side code to avoid server-side conflicts
-  env: {
-    // AWS Cognito configuration for client-side authentication
-    NEXT_PUBLIC_COGNITO_USER_POOL_ID: process.env.COGNITO_USER_POOL_ID,
-    NEXT_PUBLIC_COGNITO_CLIENT_ID: process.env.COGNITO_CLIENT_ID,
-    NEXT_PUBLIC_COGNITO_REGION: process.env.COGNITO_REGION,
-    // Application URLs for client-side routing and API calls
-    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
-    // WebSocket URL for real-time connections (optional, has fallback)
-    NEXT_PUBLIC_WS_URL: process.env.NEXT_PUBLIC_WS_URL,
-  },
+  // AWS Amplify handles environment variables natively
+  // DO NOT use env block - it interferes with Amplify's environment variable handling
+  // Client-side variables must use NEXT_PUBLIC_ prefix in Amplify console
+  // Server-side variables can use any naming convention
 }
 
 module.exports = nextConfig
